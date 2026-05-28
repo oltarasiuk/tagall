@@ -234,7 +234,7 @@ export async function searchVideoByImdb_COMMENTED(
 ): Promise<SearchResultType[]> {
   const normalizedQuery = query.trim().toLowerCase();
   const results = await getOrSetCache(
-    (async (): Promise<SearchResultType[]> => {
+    async (): Promise<SearchResultType[]> => {
       try {
         console.log("[IMDB search] Start", { query: normalizedQuery, limit });
         const advancedHtml = await fetchImdbAdvancedSearchHtml(query);
@@ -297,7 +297,7 @@ export async function searchVideoByImdb_COMMENTED(
         console.error("[IMDB search] Failed", error, { query: normalizedQuery });
         return [];
       }
-    })(),
+    },
     "parse",
     "imdbSearch",
     { query: normalizedQuery, limit },
@@ -414,7 +414,7 @@ export async function enrichVideoDetailsFromImdb_COMMENTED(
   }
   console.log("[IMDB enrich] Start", { imdbId: normalizedId, title: base.title });
   const merged = await getOrSetCache(
-    (async (): Promise<ImdbDetailsResultType> => {
+    async (): Promise<ImdbDetailsResultType> => {
       try {
         const url = `${IMDB_TITLE_BASE}/${normalizedId}/`;
         console.log("[IMDB enrich] Fetching page", { imdbId: normalizedId, url });
@@ -439,7 +439,7 @@ export async function enrichVideoDetailsFromImdb_COMMENTED(
         });
         return base;
       }
-    })(),
+    },
     "parse",
     "imdbCrawleeEnrich",
     { parsedId: normalizedId },

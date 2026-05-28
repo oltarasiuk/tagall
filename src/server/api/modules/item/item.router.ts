@@ -1,4 +1,8 @@
-import { createTRPCRouter, protectedProcedure, publicProcedure } from "~/server/api/trpc";
+import {
+  createTRPCRouter,
+  protectedProcedure,
+  publicProcedure,
+} from "~/server/api/trpc";
 import {
   AddToCollectionInputSchema,
   DeleteFromCollectionInputSchema,
@@ -27,7 +31,7 @@ import {
   UpdateItem,
   UpdateItemImage,
 } from "./services";
-import { getOrSetCache } from "../../../../lib/redis";
+import { CACHE_TTL_SECONDS, getOrSetCache } from "../../../../lib/redis";
 import { getFirstAllowedUser } from "../../helpers";
 import { invalidateItemCaches } from "./utils/cache-invalidation.util";
 
@@ -38,7 +42,7 @@ export const ItemRouter = createTRPCRouter({
       const { ctx, input } = props;
 
       const response = await getOrSetCache(
-        GetUserItems(props),
+        () => GetUserItems(props),
         "item",
         "getUserItems",
         {
@@ -56,7 +60,7 @@ export const ItemRouter = createTRPCRouter({
       const { ctx, input } = props;
 
       const response = await getOrSetCache(
-        GetAllUserItems(props),
+        () => GetAllUserItems(props),
         "item",
         "getAllUserItems",
         {
@@ -77,7 +81,7 @@ export const ItemRouter = createTRPCRouter({
     .query(async (props) => {
       const { ctx, input } = props;
       const response = await getOrSetCache(
-        GetUserItemsStats(props),
+        () => GetUserItemsStats(props),
         "item",
         "getUserItemsStats",
         {
@@ -93,7 +97,7 @@ export const ItemRouter = createTRPCRouter({
     .query(async (props) => {
       const { ctx, input } = props;
       const response = await getOrSetCache(
-        GetUserItem(props),
+        () => GetUserItem(props),
         "item",
         "getUserItem",
         {
@@ -109,7 +113,7 @@ export const ItemRouter = createTRPCRouter({
     .query(async (props) => {
       const { input } = props;
       const response = await getOrSetCache(
-        GetNearestItems(props),
+        () => GetNearestItems(props),
         "item",
         "getNearestItems",
         {
@@ -124,7 +128,7 @@ export const ItemRouter = createTRPCRouter({
     .query(async (props) => {
       const { ctx, input } = props;
       const response = await getOrSetCache(
-        GetYearsRange(props),
+        () => GetYearsRange(props),
         "item",
         "getYearsRange",
         {
@@ -158,7 +162,7 @@ export const ItemRouter = createTRPCRouter({
       await invalidateItemCaches(ctx.session.user.id, {
         itemId: input.id,
       });
-      
+
       return response;
     }),
 
@@ -171,7 +175,7 @@ export const ItemRouter = createTRPCRouter({
       await invalidateItemCaches(ctx.session.user.id, {
         itemId: input.id,
       });
-      
+
       return response;
     }),
 
@@ -185,7 +189,7 @@ export const ItemRouter = createTRPCRouter({
         itemId: input,
         includeSearch: true,
       });
-      
+
       return response;
     }),
 
@@ -194,7 +198,7 @@ export const ItemRouter = createTRPCRouter({
     .query(async (props) => {
       const { ctx, input } = props;
       const response = await getOrSetCache(
-        SearchItemByText(props),
+        () => SearchItemByText(props),
         "item",
         "searchItemByText",
         {
@@ -209,27 +213,30 @@ export const ItemRouter = createTRPCRouter({
     .input(GetUserItemsInputSchema)
     .query(async (props) => {
       const { ctx, input } = props;
-      const user = await getFirstAllowedUser(ctx.db);
-      if (!user) {
-        throw new Error("Public user not found");
-      }
-
-      const publicCtx = {
-        ...ctx,
-        session: {
-          user: { id: user.id, email: user.email, name: user.name },
-          expires: "",
-        },
-      };
 
       const response = await getOrSetCache(
-        GetUserItems({ ctx: publicCtx, input }),
+        async () => {
+          const user = await getFirstAllowedUser(ctx.db);
+          if (!user) {
+            throw new Error("Public user not found");
+          }
+
+          const publicCtx = {
+            ...ctx,
+            session: {
+              user: { id: user.id, email: user.email, name: user.name },
+              expires: "",
+            },
+          };
+
+          return GetUserItems({ ctx: publicCtx, input });
+        },
         "item",
         "getPublicUserItems",
         {
-          userId: user.id,
           input,
         },
+        CACHE_TTL_SECONDS.public,
       );
 
       return response;
@@ -239,27 +246,30 @@ export const ItemRouter = createTRPCRouter({
     .input(GetAllUserItemsInputSchema)
     .query(async (props) => {
       const { ctx, input } = props;
-      const user = await getFirstAllowedUser(ctx.db);
-      if (!user) {
-        throw new Error("Public user not found");
-      }
-
-      const publicCtx = {
-        ...ctx,
-        session: {
-          user: { id: user.id, email: user.email, name: user.name },
-          expires: "",
-        },
-      };
 
       const response = await getOrSetCache(
-        GetAllUserItems({ ctx: publicCtx, input }),
+        async () => {
+          const user = await getFirstAllowedUser(ctx.db);
+          if (!user) {
+            throw new Error("Public user not found");
+          }
+
+          const publicCtx = {
+            ...ctx,
+            session: {
+              user: { id: user.id, email: user.email, name: user.name },
+              expires: "",
+            },
+          };
+
+          return GetAllUserItems({ ctx: publicCtx, input });
+        },
         "item",
         "getPublicAllUserItems",
         {
-          userId: user.id,
           input,
         },
+        CACHE_TTL_SECONDS.public,
       );
 
       return response;
@@ -269,47 +279,58 @@ export const ItemRouter = createTRPCRouter({
     .input(GetRandomUserItemsInputSchema)
     .query(async (props) => {
       const { ctx, input } = props;
-      const user = await getFirstAllowedUser(ctx.db);
-      if (!user) {
-        throw new Error("Public user not found");
-      }
+      return getOrSetCache(
+        async () => {
+          const user = await getFirstAllowedUser(ctx.db);
+          if (!user) {
+            throw new Error("Public user not found");
+          }
 
-      const publicCtx = {
-        ...ctx,
-        session: {
-          user: { id: user.id, email: user.email, name: user.name },
-          expires: "",
+          const publicCtx = {
+            ...ctx,
+            session: {
+              user: { id: user.id, email: user.email, name: user.name },
+              expires: "",
+            },
+          };
+
+          return GetRandomUserItems({ ctx: publicCtx, input });
         },
-      };
-
-      return GetRandomUserItems({ ctx: publicCtx, input });
+        "item",
+        "getPublicRandomUserItems",
+        { input },
+        CACHE_TTL_SECONDS.public,
+      );
     }),
 
   getPublicUserItemsStats: publicProcedure
     .input(GetUserItemsStatsInputSchema)
     .query(async (props) => {
       const { ctx, input } = props;
-      const user = await getFirstAllowedUser(ctx.db);
-      if (!user) {
-        throw new Error("Public user not found");
-      }
-
-      const publicCtx = {
-        ...ctx,
-        session: {
-          user: { id: user.id, email: user.email, name: user.name },
-          expires: "",
-        },
-      };
 
       const response = await getOrSetCache(
-        GetUserItemsStats({ ctx: publicCtx, input }),
+        async () => {
+          const user = await getFirstAllowedUser(ctx.db);
+          if (!user) {
+            throw new Error("Public user not found");
+          }
+
+          const publicCtx = {
+            ...ctx,
+            session: {
+              user: { id: user.id, email: user.email, name: user.name },
+              expires: "",
+            },
+          };
+
+          return GetUserItemsStats({ ctx: publicCtx, input });
+        },
         "item",
         "getPublicUserItemsStats",
         {
-          userId: user.id,
           input,
         },
+        CACHE_TTL_SECONDS.public,
       );
 
       return response;
@@ -319,27 +340,30 @@ export const ItemRouter = createTRPCRouter({
     .input(GetYearsRangeInputSchema)
     .query(async (props) => {
       const { ctx, input } = props;
-      const user = await getFirstAllowedUser(ctx.db);
-      if (!user) {
-        throw new Error("Public user not found");
-      }
-
-      const publicCtx = {
-        ...ctx,
-        session: {
-          user: { id: user.id, email: user.email, name: user.name },
-          expires: "",
-        },
-      };
 
       const response = await getOrSetCache(
-        GetYearsRange({ ctx: publicCtx, input }),
+        async () => {
+          const user = await getFirstAllowedUser(ctx.db);
+          if (!user) {
+            throw new Error("Public user not found");
+          }
+
+          const publicCtx = {
+            ...ctx,
+            session: {
+              user: { id: user.id, email: user.email, name: user.name },
+              expires: "",
+            },
+          };
+
+          return GetYearsRange({ ctx: publicCtx, input });
+        },
         "item",
         "getPublicYearsRange",
         {
-          userId: user.id,
           input,
         },
+        CACHE_TTL_SECONDS.public,
       );
 
       return response;

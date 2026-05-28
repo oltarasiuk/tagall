@@ -1,10 +1,14 @@
-import { createTRPCRouter, protectedProcedure, publicProcedure } from "~/server/api/trpc";
+import {
+  createTRPCRouter,
+  protectedProcedure,
+  publicProcedure,
+} from "~/server/api/trpc";
 import {
   GetFilterFieldsInputSchema,
   GetItemDetailFieldsInputSchema,
 } from "./schemas";
 import { GetFilterFields, GetItemDetailFields } from "./services";
-import { getOrSetCache } from "../../../../lib/redis";
+import { CACHE_TTL_SECONDS, getOrSetCache } from "../../../../lib/redis";
 import { getFirstAllowedUser } from "../../helpers";
 
 export const FieldRouter = createTRPCRouter({
@@ -13,7 +17,7 @@ export const FieldRouter = createTRPCRouter({
     .query(async (props) => {
       const { ctx, input } = props;
       const response = await getOrSetCache(
-        GetFilterFields(props),
+        () => GetFilterFields(props),
         "field",
         "getFilterFields",
         {
@@ -29,7 +33,7 @@ export const FieldRouter = createTRPCRouter({
     .query(async (props) => {
       const { input } = props;
       const response = await getOrSetCache(
-        GetItemDetailFields(props),
+        () => GetItemDetailFields(props),
         "field",
         "getItemDetailFields",
         {
@@ -43,27 +47,30 @@ export const FieldRouter = createTRPCRouter({
     .input(GetFilterFieldsInputSchema)
     .query(async (props) => {
       const { ctx, input } = props;
-      const user = await getFirstAllowedUser(ctx.db);
-      if (!user) {
-        throw new Error("Public user not found");
-      }
-
-      const publicCtx = {
-        ...ctx,
-        session: {
-          user: { id: user.id, email: user.email, name: user.name },
-          expires: "",
-        },
-      };
 
       const response = await getOrSetCache(
-        GetFilterFields({ ctx: publicCtx, input }),
+        async () => {
+          const user = await getFirstAllowedUser(ctx.db);
+          if (!user) {
+            throw new Error("Public user not found");
+          }
+
+          const publicCtx = {
+            ...ctx,
+            session: {
+              user: { id: user.id, email: user.email, name: user.name },
+              expires: "",
+            },
+          };
+
+          return GetFilterFields({ ctx: publicCtx, input });
+        },
         "field",
         "getPublicFilterFields",
         {
-          userId: user.id,
           input,
         },
+        CACHE_TTL_SECONDS.public,
       );
 
       return response;

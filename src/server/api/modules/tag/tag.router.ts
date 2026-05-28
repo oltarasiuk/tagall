@@ -14,7 +14,7 @@ export const TagRouter = createTRPCRouter({
     .query(async (props) => {
       const { ctx } = props;
       const response = await getOrSetCache(
-        GetUserTags(props),
+        () => GetUserTags(props),
         "tag",
         "getUserTags",
         {

@@ -57,6 +57,9 @@ export const CACHE_KEYS = {
       search: true,
       input: true,
     },
+    getPublicRandomUserItems: {
+      input: true,
+    },
     getPublicUserItemsStats: {
       userId: true,
       collectionsIds: true,

@@ -25,7 +25,10 @@ function getAuthParams(): Record<string, string> {
   return {};
 }
 
-async function tmdbGet<T>(path: string, params: Record<string, string> = {}): Promise<T> {
+async function tmdbGet<T>(
+  path: string,
+  params: Record<string, string> = {},
+): Promise<T> {
   const url = `${TMDB_BASE}${path}`;
   const allParams = { ...getAuthParams(), ...params };
   const response = await axios.get<T>(url, {
@@ -184,7 +187,8 @@ export async function searchVideo(
       image: posterUrl(m.poster_path),
       year: yearFromDate(m.release_date),
       description: m.overview ?? null,
-      keywords: m.vote_average != null ? [`${m.vote_average.toFixed(1)} tmdb`] : [],
+      keywords:
+        m.vote_average != null ? [`${m.vote_average.toFixed(1)} tmdb`] : [],
       mediaType: "movie",
       tmdbId: m.id,
       voteAverage: m.vote_average ?? null,
@@ -196,7 +200,8 @@ export async function searchVideo(
       image: posterUrl(t.poster_path),
       year: yearFromDate(t.first_air_date),
       description: t.overview ?? null,
-      keywords: t.vote_average != null ? [`${t.vote_average.toFixed(1)} tmdb`] : [],
+      keywords:
+        t.vote_average != null ? [`${t.vote_average.toFixed(1)} tmdb`] : [],
       mediaType: "tv",
       tmdbId: t.id,
       voteAverage: t.vote_average ?? null,
@@ -241,18 +246,21 @@ export type TmdbFindResult2 = {
   description: string | null;
 };
 
-export async function findByImdbId(imdbId: string): Promise<TmdbFindResult2 | null> {
+export async function findByImdbId(
+  imdbId: string,
+): Promise<TmdbFindResult2 | null> {
   const id = imdbId.startsWith("tt") ? imdbId : `tt${imdbId}`;
-  const data = await tmdbGet<TmdbFindResponse>(
-    `/find/${id}`,
-    { external_source: "imdb_id" },
-  );
+  const data = await tmdbGet<TmdbFindResponse>(`/find/${id}`, {
+    external_source: "imdb_id",
+  });
   if (data.movie_results?.[0]) {
     const result = data.movie_results[0];
     return {
       mediaType: "movie",
       tmdbId: result.id,
-      posterUrl: result.poster_path ? `${TMDB_IMAGE_BASE}${result.poster_path}` : null,
+      posterUrl: result.poster_path
+        ? `${TMDB_IMAGE_BASE}${result.poster_path}`
+        : null,
       description: result.overview ?? null,
     };
   }
@@ -261,16 +269,20 @@ export async function findByImdbId(imdbId: string): Promise<TmdbFindResult2 | nu
     return {
       mediaType: "tv",
       tmdbId: result.id,
-      posterUrl: result.poster_path ? `${TMDB_IMAGE_BASE}${result.poster_path}` : null,
+      posterUrl: result.poster_path
+        ? `${TMDB_IMAGE_BASE}${result.poster_path}`
+        : null,
       description: result.overview ?? null,
     };
   }
   return null;
 }
 
-async function getMovieDetailsCached(tmdbId: number): Promise<ImdbDetailsResultType> {
+async function getMovieDetailsCached(
+  tmdbId: number,
+): Promise<ImdbDetailsResultType> {
   return getOrSetCache(
-    getMovieDetailsUncached(tmdbId),
+    () => getMovieDetailsUncached(tmdbId),
     "parse",
     "tmdbMovieDetails",
     { tmdbId },
@@ -278,7 +290,9 @@ async function getMovieDetailsCached(tmdbId: number): Promise<ImdbDetailsResultT
   );
 }
 
-async function getMovieDetailsUncached(tmdbId: number): Promise<ImdbDetailsResultType> {
+async function getMovieDetailsUncached(
+  tmdbId: number,
+): Promise<ImdbDetailsResultType> {
   const [movie, credits, keywords, releaseDates] = await Promise.all([
     tmdbGet<TmdbMovieDetails>(`/movie/${tmdbId}`),
     tmdbGet<TmdbCreditsResponse>(`/movie/${tmdbId}/credits`),
@@ -288,7 +302,8 @@ async function getMovieDetailsUncached(tmdbId: number): Promise<ImdbDetailsResul
 
   const people = [
     ...(credits.cast?.slice(0, 15).map((c) => c.name) ?? []),
-    ...(credits.crew?.filter((c) => c.job === "Director").map((c) => c.name) ?? []),
+    ...(credits.crew?.filter((c) => c.job === "Director").map((c) => c.name) ??
+      []),
   ];
   const cert =
     releaseDates.results?.find((r) => r.iso_3166_1 === "US")?.release_dates?.[0]
@@ -316,9 +331,11 @@ async function getMovieDetailsUncached(tmdbId: number): Promise<ImdbDetailsResul
   };
 }
 
-async function getTvDetailsCached(tmdbId: number): Promise<ImdbDetailsResultType> {
+async function getTvDetailsCached(
+  tmdbId: number,
+): Promise<ImdbDetailsResultType> {
   return getOrSetCache(
-    getTvDetailsUncached(tmdbId),
+    () => getTvDetailsUncached(tmdbId),
     "parse",
     "tmdbTvDetails",
     { tmdbId },
@@ -326,7 +343,9 @@ async function getTvDetailsCached(tmdbId: number): Promise<ImdbDetailsResultType
   );
 }
 
-async function getTvDetailsUncached(tmdbId: number): Promise<ImdbDetailsResultType> {
+async function getTvDetailsUncached(
+  tmdbId: number,
+): Promise<ImdbDetailsResultType> {
   const [tv, credits, keywords, contentRatings] = await Promise.all([
     tmdbGet<TmdbTvDetails>(`/tv/${tmdbId}`),
     tmdbGet<TmdbCreditsResponse>(`/tv/${tmdbId}/credits`),
@@ -336,7 +355,8 @@ async function getTvDetailsUncached(tmdbId: number): Promise<ImdbDetailsResultTy
 
   const people = [
     ...(credits.cast?.slice(0, 15).map((c) => c.name) ?? []),
-    ...(credits.crew?.filter((c) => c.job === "Director").map((c) => c.name) ?? []),
+    ...(credits.crew?.filter((c) => c.job === "Director").map((c) => c.name) ??
+      []),
   ];
   const cert =
     contentRatings.results?.find((r) => r.iso_3166_1 === "US")?.rating ?? null;

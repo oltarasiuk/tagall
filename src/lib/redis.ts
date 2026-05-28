@@ -6,6 +6,11 @@ import { buildCacheKey, type CacheKeyParams } from "./cache-key";
 let client: RedisClientType | null = null;
 let connectionFailed = false;
 
+export const CACHE_TTL_SECONDS = {
+  default: 60 * 60 * 24,
+  public: 60 * 60 * 24 * 30,
+} as const;
+
 function isRedisConfigured(): boolean {
   return !!env.REDIS_HOST && !!env.REDIS_PORT;
 }
@@ -43,13 +48,13 @@ async function getClient(): Promise<RedisClientType | null> {
 
 async function getOrSetCacheByKey<T>(
   key: string,
-  promise: Promise<T>,
+  fetcher: () => Promise<T>,
   ttl?: number,
 ): Promise<T> {
   const redis = await getClient();
 
   if (!redis) {
-    return promise;
+    return fetcher();
   }
 
   const startTime = Date.now();
@@ -63,12 +68,11 @@ async function getOrSetCacheByKey<T>(
 
   console.log(`[Cache MISS] Key: "${key}" - fetching from database`);
   const dataStartTime = Date.now();
-  const data = await promise;
+  const data = await fetcher();
   const dataDuration = Date.now() - dataStartTime;
   console.log(`[Cache MISS] Data fetched for "${key}" (${dataDuration}ms)`);
 
-  const defaultTTL = 60 * 60 * 24; // 1 day
-  const ttlSeconds = ttl ?? defaultTTL;
+  const ttlSeconds = ttl ?? CACHE_TTL_SECONDS.default;
 
   const setCacheStartTime = Date.now();
   await redis.setEx(key, ttlSeconds, JSON.stringify(data));
@@ -85,7 +89,9 @@ async function deleteCacheByPrefix(keyPrefix: string): Promise<void> {
 
   if (!redis) return;
 
-  console.log(`[Cache INVALIDATE] Starting invalidation for prefix: "${keyPrefix}"`);
+  console.log(
+    `[Cache INVALIDATE] Starting invalidation for prefix: "${keyPrefix}"`,
+  );
   const startTime = Date.now();
   let totalDeleted = 0;
   const batchSize = 100;
@@ -121,14 +127,14 @@ export async function getOrSetCache<
   Category extends keyof typeof CACHE_KEYS,
   Key extends keyof (typeof CACHE_KEYS)[Category],
 >(
-  promise: Promise<T>,
+  fetcher: () => Promise<T>,
   category: Category,
   key: Key,
   params: Partial<CacheKeyParams<Category, Key>> = {},
   ttl?: number,
 ): Promise<T> {
   const cacheKey = buildCacheKey(category, key, params);
-  return getOrSetCacheByKey(cacheKey, promise, ttl);
+  return getOrSetCacheByKey(cacheKey, fetcher, ttl);
 }
 
 const redisClient = { getClient, getOrSetCache, deleteCache };

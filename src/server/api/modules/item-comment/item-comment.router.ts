@@ -20,7 +20,7 @@ export const ItemCommentRouter = createTRPCRouter({
       const { ctx, input } = props;
 
       const response = await getOrSetCache(
-        GetUserItemComments(props),
+        () => GetUserItemComments(props),
         "comment",
         "getUserComments",
         {

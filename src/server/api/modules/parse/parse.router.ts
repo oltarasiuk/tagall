@@ -6,10 +6,15 @@ import { getOrSetCache } from "../../../../lib/redis";
 export const ParseRouter = createTRPCRouter({
   search: protectedProcedure.input(SearchInputSchema).query(async (props) => {
     const { ctx, input } = props;
-    const response = await getOrSetCache(Search(props), "parse", "search", {
-      userId: ctx.session.user.id,
-      input,
-    });
+    const response = await getOrSetCache(
+      () => Search(props),
+      "parse",
+      "search",
+      {
+        userId: ctx.session.user.id,
+        input,
+      },
+    );
     return AddIdToSearchResults({ ...props, items: response });
   }),
 
@@ -18,7 +23,7 @@ export const ParseRouter = createTRPCRouter({
     .mutation(async (props) => {
       const { ctx, input } = props;
       const response = await getOrSetCache(
-        ParseRegrex(props),
+        () => ParseRegrex(props),
         "parse",
         "regrex",
         {
