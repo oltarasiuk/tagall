@@ -57,19 +57,21 @@ export function TRPCReactProvider(props: {
             const headers = new Headers();
             const secret = props.ssrOnlySecret;
 
-            try {
-              const value = await readSSROnlySecret(
-                secret,
-                "SECRET_CLIENT_COOKIE_VAR",
-              );
+            headers.set("x-trpc-source", "nextjs-react");
 
-              headers.set("x-trpc-source", "nextjs-react");
-              if (value) {
-                headers.set("cookie", value);
+            try {
+              if (secret) {
+                const value = await readSSROnlySecret(
+                  secret,
+                  "SECRET_CLIENT_COOKIE_VAR",
+                );
+
+                if (value) {
+                  headers.set("cookie", value);
+                }
               }
             } catch (error) {
               console.error("Error reading SSR secret:", error);
-              headers.set("x-trpc-source", "nextjs-react");
             }
 
             return headers;
