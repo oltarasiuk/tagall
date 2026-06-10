@@ -23,9 +23,23 @@ const config = {
     remotePatterns: [
       {
         protocol: "https",
-        hostname: "**",
-        port: "",
-        pathname: "**",
+        hostname: "res.cloudinary.com",
+      },
+      {
+        protocol: "https",
+        hostname: "lh3.googleusercontent.com",
+      },
+      {
+        protocol: "https",
+        hostname: "image.tmdb.org",
+      },
+      {
+        protocol: "https",
+        hostname: "s4.anilist.co",
+      },
+      {
+        protocol: "https",
+        hostname: "m.media-amazon.com",
       },
     ],
   },
