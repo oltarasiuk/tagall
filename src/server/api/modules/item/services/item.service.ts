@@ -733,6 +733,8 @@ export async function UpdateItemImage(props: {
   }
 
   // Update item image in database
+  // NOTE: Item is shared across users (deduplicated by parsedId).
+  // Updating the image here changes it for every user who has this item.
   await ctx.db.item.update({
     where: {
       id: input.id,
