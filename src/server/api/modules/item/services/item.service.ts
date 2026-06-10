@@ -37,6 +37,7 @@ import {
   getUserItemsStatusStats,
 } from "./item-stats.service";
 import { normalizeText } from "~/utils/normalize-text";
+import { logger } from "~/lib/logger";
 import { MAX_ALL_USER_ITEMS } from "~/constants/limits.const";
 import { normalizeExternalRating } from "../utils/normalize-external-rating.util";
 import { assertPublicUrl } from "../../../helpers";
@@ -55,7 +56,7 @@ async function UpdateEmbedding(props: {
 }): Promise<void> {
   const { ctx, itemId } = props;
 
-  console.log(`[UpdateEmbedding] Starting to update embedding for item: ${itemId}`);
+  logger.debug(`[UpdateEmbedding] Starting to update embedding for item: ${itemId}`);
   const startTime = Date.now();
 
   const item = await ctx.db.item.findUnique({
@@ -69,20 +70,20 @@ async function UpdateEmbedding(props: {
   });
 
   if (!item) {
-    console.error(`[UpdateEmbedding] Item not found: ${itemId}`);
+    logger.error(`[UpdateEmbedding] Item not found: ${itemId}`);
     throw new Error("Item not found!");
   }
 
-  console.log(`[UpdateEmbedding] Item found: "${item.title}" (${item.id})`);
-  console.log(`[UpdateEmbedding] Transforming item details for ${itemId}`);
+  logger.debug(`[UpdateEmbedding] Item found: "${item.title}" (${item.id})`);
+  logger.debug(`[UpdateEmbedding] Transforming item details for ${itemId}`);
   const details = await ItemResponse.transformItemDetails({ ctx, item });
 
-  console.log(`[UpdateEmbedding] Getting embedding from OpenAI for ${itemId}`);
+  logger.debug(`[UpdateEmbedding] Getting embedding from OpenAI for ${itemId}`);
   const embeddingStartTime = Date.now();
   const embedding = await GetEmbedding(details);
-  console.log(`[UpdateEmbedding] Embedding received from OpenAI (${Date.now() - embeddingStartTime}ms)`);
+  logger.debug(`[UpdateEmbedding] Embedding received from OpenAI (${Date.now() - embeddingStartTime}ms)`);
 
-  console.log(`[UpdateEmbedding] Updating embedding in database for ${itemId}`);
+  logger.debug(`[UpdateEmbedding] Updating embedding in database for ${itemId}`);
   await UpdateItemEmbedding({
     ctx,
     embedding,
@@ -90,7 +91,7 @@ async function UpdateEmbedding(props: {
   });
 
   const totalDuration = Date.now() - startTime;
-  console.log(`[UpdateEmbedding] Successfully updated embedding for "${item.title}" (${totalDuration}ms)`);
+  logger.debug(`[UpdateEmbedding] Successfully updated embedding for "${item.title}" (${totalDuration}ms)`);
 }
 
 async function CreateItem(props: {
@@ -101,15 +102,15 @@ async function CreateItem(props: {
 }) {
   const { ctx, collectionId } = props;
   
-  console.log(`[CreateItem] Starting to create item with parsedId: ${props.parsedId}, type: ${props.type}, collectionId: ${collectionId}`);
+  logger.debug(`[CreateItem] Starting to create item with parsedId: ${props.parsedId}, type: ${props.type}, collectionId: ${collectionId}`);
   const startTime = Date.now();
   
   // Normalize parsedId: lowercase + trim for consistency
   const parsedId = normalizeText(props.parsedId);
-  console.log(`[CreateItem] Normalized parsedId: ${parsedId}`);
+  logger.debug(`[CreateItem] Normalized parsedId: ${parsedId}`);
 
   // Check if item already exists before expensive operations
-  console.log(`[CreateItem] Checking if item already exists: ${parsedId}`);
+  logger.debug(`[CreateItem] Checking if item already exists: ${parsedId}`);
   const existingItem = await ctx.db.item.findFirst({
     where: {
       parsedId,
@@ -117,22 +118,22 @@ async function CreateItem(props: {
   });
 
   if (existingItem) {
-    console.log(`[CreateItem] Item already exists: ${parsedId} - ID: ${existingItem.id}, Title: "${existingItem.title}" (${Date.now() - startTime}ms)`);
+    logger.debug(`[CreateItem] Item already exists: ${parsedId} - ID: ${existingItem.id}, Title: "${existingItem.title}" (${Date.now() - startTime}ms)`);
     return existingItem;
   }
 
   // Fetch details OUTSIDE transaction to avoid timeout
   // ScrapingAnt requests can take 30+ seconds each
-  console.log(`[CreateItem] Fetching details for ${parsedId} from ${props.type}`);
+  logger.debug(`[CreateItem] Fetching details for ${parsedId} from ${props.type}`);
   let details: Record<string, unknown>;
 
   switch (props.type) {
     case "imdb": {
-      console.log("[CreateItem] IMDB: fetching TMDB details by IMDb id", {
+      logger.debug("[CreateItem] IMDB: fetching TMDB details by IMDb id", {
         parsedId,
       });
       details = await getVideoDetailsByImdbId(parsedId);
-      console.log("[CreateItem] IMDB: TMDB details received, enriching from IMDB page", {
+      logger.debug("[CreateItem] IMDB: TMDB details received, enriching from IMDB page", {
         parsedId,
         title: (details as ImdbDetailsResultType).title,
       });
@@ -148,17 +149,17 @@ async function CreateItem(props: {
     default:
       throw new Error("Invalid type");
   }
-  console.log(`[CreateItem] Details fetched for ${parsedId} (${Date.now() - startTime}ms)`);
+  logger.debug(`[CreateItem] Details fetched for ${parsedId} (${Date.now() - startTime}ms)`);
 
   const title = details?.title;
   if (!title || typeof title !== "string") {
-    console.error(`[CreateItem] Parse error! Title not found for ${parsedId}`);
+    logger.error(`[CreateItem] Parse error! Title not found for ${parsedId}`);
     throw new Error("Parse error! Title not found!");
   }
-  console.log(`[CreateItem] Parsed title: "${title}"`);
+  logger.debug(`[CreateItem] Parsed title: "${title}"`);
 
   // Get collection info
-  console.log(`[CreateItem] Fetching collection info: ${collectionId}`);
+  logger.debug(`[CreateItem] Fetching collection info: ${collectionId}`);
   const collection = await ctx.db.collection.findUnique({
     where: {
       id: collectionId,
@@ -166,13 +167,13 @@ async function CreateItem(props: {
   });
 
   if (!collection) {
-    console.error(`[CreateItem] Collection not found: ${collectionId}`);
+    logger.error(`[CreateItem] Collection not found: ${collectionId}`);
     throw new Error("Collection not found!");
   }
-  console.log(`[CreateItem] Collection found: ${collection.name}`);
+  logger.debug(`[CreateItem] Collection found: ${collection.name}`);
 
   // Upload image OUTSIDE transaction
-  console.log(`[CreateItem] Uploading image for ${parsedId}`);
+  logger.debug(`[CreateItem] Uploading image for ${parsedId}`);
   const uploadStartTime = Date.now();
   let image: string | null = null;
   try {
@@ -181,16 +182,16 @@ async function CreateItem(props: {
       details.image as string | null | undefined,
     );
   } catch (error) {
-    console.error(
+    logger.error(
       `[CreateItem] Poster upload failed for ${parsedId}`,
       error,
     );
     throw error;
   }
-  console.log(`[CreateItem] Image uploaded for ${parsedId}: ${image ?? "null"} (${Date.now() - uploadStartTime}ms)`);
+  logger.debug(`[CreateItem] Image uploaded for ${parsedId}: ${image ?? "null"} (${Date.now() - uploadStartTime}ms)`);
 
   // Now start transaction for DB operations only
-  console.log(`[CreateItem] Starting database transaction for ${parsedId}`);
+  logger.debug(`[CreateItem] Starting database transaction for ${parsedId}`);
   const transactionStartTime = Date.now();
   const transactionResult = await ctx.db.$transaction(
     async (prisma) => {
@@ -220,7 +221,7 @@ async function CreateItem(props: {
         ) {
           const oldItem = await prisma.item.findUnique({ where: { parsedId } });
           if (oldItem) {
-            console.log(
+            logger.debug(
               `[CreateItem] Item was created by another request: ${parsedId}`,
             );
             return oldItem;
@@ -228,7 +229,7 @@ async function CreateItem(props: {
         }
         throw error;
       }
-      console.log(`[CreateItem] Item created in DB: ${item.id} - "${item.title}"`);
+      logger.debug(`[CreateItem] Item created in DB: ${item.id} - "${item.title}"`);
 
       const keys = Object.keys(details);
 
@@ -242,7 +243,7 @@ async function CreateItem(props: {
               },
               select: { id: true, name: true },
             });
-      console.log(`[CreateItem] Found ${fieldGroups.length} field groups for ${parsedId}`);
+      logger.debug(`[CreateItem] Found ${fieldGroups.length} field groups for ${parsedId}`);
       
       const fields: { field: string; fieldGroupId: string }[] = [];
       for (const fieldGroup of fieldGroups) {
@@ -276,7 +277,7 @@ async function CreateItem(props: {
         }
       }
 
-      console.log(`[CreateItem] Upserting ${fields.length} fields for ${parsedId}`);
+      logger.debug(`[CreateItem] Upserting ${fields.length} fields for ${parsedId}`);
       const values = [...new Set(fields.map((f) => f.field))];
       const existingFields =
         values.length === 0
@@ -316,7 +317,7 @@ async function CreateItem(props: {
           },
         });
       }
-      console.log(`[CreateItem] All fields upserted for ${parsedId}`);
+      logger.debug(`[CreateItem] All fields upserted for ${parsedId}`);
 
       return item;
     },
@@ -325,8 +326,8 @@ async function CreateItem(props: {
 
   const transactionDuration = Date.now() - transactionStartTime;
   const totalDuration = Date.now() - startTime;
-  console.log(`[CreateItem] Transaction completed for ${parsedId} (${transactionDuration}ms)`);
-  console.log(`[CreateItem] Successfully created item: ${transactionResult.id} - "${transactionResult.title}" (Total: ${totalDuration}ms)`);
+  logger.debug(`[CreateItem] Transaction completed for ${parsedId} (${transactionDuration}ms)`);
+  logger.debug(`[CreateItem] Successfully created item: ${transactionResult.id} - "${transactionResult.title}" (Total: ${totalDuration}ms)`);
 
   return transactionResult;
 }
@@ -528,20 +529,20 @@ export async function AddToCollection(props: {
 }) {
   const { ctx, input } = props;
 
-  console.log(`[AddToCollection] Starting to add item to collection`);
-  console.log(`[AddToCollection] User: ${ctx.session.user.id}, ParsedId: ${input.parsedId}, CollectionId: ${input.collectionId}`);
+  logger.debug(`[AddToCollection] Starting to add item to collection`);
+  logger.debug(`[AddToCollection] User: ${ctx.session.user.id}, ParsedId: ${input.parsedId}, CollectionId: ${input.collectionId}`);
   const startTime = Date.now();
 
-  console.log(`[AddToCollection] Fetching collection info: ${input.collectionId}`);
+  logger.debug(`[AddToCollection] Fetching collection info: ${input.collectionId}`);
   const collection = await ctx.db.collection.findUnique({
     where: { id: input.collectionId },
   });
 
   if (!collection) {
-    console.error(`[AddToCollection] Collection not found: ${input.collectionId}`);
+    logger.error(`[AddToCollection] Collection not found: ${input.collectionId}`);
     throw new Error("Collection not found");
   }
-  console.log(`[AddToCollection] Collection found: ${collection.name}`);
+  logger.debug(`[AddToCollection] Collection found: ${collection.name}`);
 
   let item;
   try {
@@ -557,7 +558,7 @@ export async function AddToCollection(props: {
         if (!targetCollection) {
           throw new Error(`Collection "${targetCollectionName}" not found`);
         }
-        console.log(`[AddToCollection] Creating video item (${mediaType}) for ${targetCollectionName}`);
+        logger.debug(`[AddToCollection] Creating video item (${mediaType}) for ${targetCollectionName}`);
         item = await CreateItem({
           ctx,
           type: "imdb",
@@ -567,7 +568,7 @@ export async function AddToCollection(props: {
         break;
       }
       case "Manga":
-        console.log(`[AddToCollection] Creating Anilist item for Manga`);
+        logger.debug(`[AddToCollection] Creating Anilist item for Manga`);
         item = await CreateItem({
           ctx,
           type: "anilist",
@@ -576,24 +577,24 @@ export async function AddToCollection(props: {
         });
         break;
       default:
-        console.error(`[AddToCollection] Invalid collection name: ${collection.name}`);
+        logger.error(`[AddToCollection] Invalid collection name: ${collection.name}`);
         throw new Error("Invalid collection name");
     }
-    console.log(`[AddToCollection] Item created successfully: ${item.id} - "${item.title}" (${Date.now() - startTime}ms)`);
+    logger.debug(`[AddToCollection] Item created successfully: ${item.id} - "${item.title}" (${Date.now() - startTime}ms)`);
   } catch (error) {
     const duration = Date.now() - startTime;
-    console.error(`[AddToCollection] Error creating item after ${duration}ms:`, error);
+    logger.error(`[AddToCollection] Error creating item after ${duration}ms:`, error);
     throw new Error(
       `Failed to create item: ${error instanceof Error ? error.message : "Unknown error"}`,
     );
   }
 
   if (!item) {
-    console.error(`[AddToCollection] Item not found after creation`);
+    logger.error(`[AddToCollection] Item not found after creation`);
     throw new Error("Something went wrong! Item not found!");
   }
 
-  console.log(`[AddToCollection] Creating user-to-item relationship`);
+  logger.debug(`[AddToCollection] Creating user-to-item relationship`);
   const userToItem = await ctx.db.userToItem.create({
     data: {
       userId: ctx.session.user.id,
@@ -607,20 +608,20 @@ export async function AddToCollection(props: {
       }),
     },
   });
-  console.log(`[AddToCollection] User-to-item relationship created: ${userToItem.id}`);
+  logger.debug(`[AddToCollection] User-to-item relationship created: ${userToItem.id}`);
 
   // Fire-and-forget: embedding is only needed for similarity search later,
   // do not block the user response on the OpenAI call.
-  console.log(`[AddToCollection] Scheduling embedding update for item: ${item.id}`);
+  logger.debug(`[AddToCollection] Scheduling embedding update for item: ${item.id}`);
   void UpdateEmbedding({ ctx, itemId: item.id }).catch((error) => {
-    console.error(
+    logger.error(
       `[AddToCollection] Background embedding update failed for ${item.id}:`,
       error,
     );
   });
 
   if (input.comment) {
-    console.log(`[AddToCollection] Creating comment for item: ${item.id}`);
+    logger.debug(`[AddToCollection] Creating comment for item: ${item.id}`);
     await ctx.db.itemComment.create({
       data: {
         title: input.comment.title,
@@ -632,11 +633,11 @@ export async function AddToCollection(props: {
         userToItemId: userToItem.id,
       },
     });
-    console.log(`[AddToCollection] Comment created`);
+    logger.debug(`[AddToCollection] Comment created`);
   }
 
   const totalDuration = Date.now() - startTime;
-  console.log(`[AddToCollection] Successfully added "${item.title}" to collection "${collection.name}" (Total: ${totalDuration}ms)`);
+  logger.debug(`[AddToCollection] Successfully added "${item.title}" to collection "${collection.name}" (Total: ${totalDuration}ms)`);
 
   return "Item added successfully!";
 }
@@ -849,23 +850,23 @@ export async function UpdateAllEmbeddings(props: { ctx: ContextType }) {
   const { ctx } = props;
 
   const items = await ctx.db.item.findMany();
-  console.log(`Found ${items.length} items`);
+  logger.debug(`Found ${items.length} items`);
   for (let i = 0; i < items.length; i++) {
     const item = items[i];
     if (item) {
-      console.log(`==============START ${i}=======================`);
-      console.log(`${i}) Updating ${item.title}`);
+      logger.debug(`==============START ${i}=======================`);
+      logger.debug(`${i}) Updating ${item.title}`);
       try {
         await UpdateEmbedding({ ctx, itemId: item.id });
       } catch (error) {
-        console.log(`Error updating ${item.title}`);
-        console.log(error);
+        logger.debug(`Error updating ${item.title}`);
+        logger.debug(error);
       }
-      console.log(`=================END ${i}====================`);
+      logger.debug(`=================END ${i}====================`);
     }
   }
 
-  console.log("Finished");
+  logger.debug("Finished");
 }
 
 // #endregion public functions

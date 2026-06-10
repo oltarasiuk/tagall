@@ -2,6 +2,7 @@ import { createClient, type RedisClientType } from "redis";
 import { env } from "~/env";
 import type { CACHE_KEYS } from "../constants/cache-keys.const";
 import { buildCacheKey, type CacheKeyParams } from "./cache-key";
+import { logger } from "./logger";
 
 let client: RedisClientType | null = null;
 let lastConnectionFailureAt = 0;
@@ -73,22 +74,22 @@ async function getOrSetCacheByKey<T>(
 
   if (raw !== null) {
     const duration = Date.now() - startTime;
-    console.log(`[Cache HIT] Key: "${key}" (${duration}ms)`);
+    logger.debug(`[Cache HIT] Key: "${key}" (${duration}ms)`);
     return JSON.parse(raw) as T;
   }
 
-  console.log(`[Cache MISS] Key: "${key}" - fetching from database`);
+  logger.debug(`[Cache MISS] Key: "${key}" - fetching from database`);
   const dataStartTime = Date.now();
   const data = await fetcher();
   const dataDuration = Date.now() - dataStartTime;
-  console.log(`[Cache MISS] Data fetched for "${key}" (${dataDuration}ms)`);
+  logger.debug(`[Cache MISS] Data fetched for "${key}" (${dataDuration}ms)`);
 
   const ttlSeconds = ttl ?? CACHE_TTL_SECONDS.default;
 
   const setCacheStartTime = Date.now();
   await redis.setEx(key, ttlSeconds, JSON.stringify(data));
   const setCacheDuration = Date.now() - setCacheStartTime;
-  console.log(
+  logger.debug(
     `[Cache SET] Key: "${key}" cached with TTL=${ttlSeconds}s (${setCacheDuration}ms)`,
   );
 
@@ -100,7 +101,7 @@ async function deleteCacheByPrefix(keyPrefix: string): Promise<void> {
 
   if (!redis) return;
 
-  console.log(
+  logger.debug(
     `[Cache INVALIDATE] Starting invalidation for prefix: "${keyPrefix}"`,
   );
   const startTime = Date.now();
@@ -127,7 +128,7 @@ async function deleteCacheByPrefix(keyPrefix: string): Promise<void> {
   }
 
   const duration = Date.now() - startTime;
-  console.log(
+  logger.debug(
     `[Cache INVALIDATE] Completed for "${keyPrefix}" - deleted ${totalDeleted} keys (${duration}ms)`,
   );
 }
