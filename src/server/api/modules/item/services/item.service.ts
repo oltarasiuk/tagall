@@ -905,9 +905,6 @@ export async function AddToCollection(props: {
     throw new Error("Something went wrong! Item not found!");
   }
 
-  console.log(`[AddToCollection] Updating embedding for item: ${item.id}`);
-  await UpdateEmbedding({ ctx, itemId: item.id });
-
   console.log(`[AddToCollection] Creating user-to-item relationship`);
   const userToItem = await ctx.db.userToItem.create({
     data: {
@@ -923,6 +920,16 @@ export async function AddToCollection(props: {
     },
   });
   console.log(`[AddToCollection] User-to-item relationship created: ${userToItem.id}`);
+
+  // Fire-and-forget: embedding is only needed for similarity search later,
+  // do not block the user response on the OpenAI call.
+  console.log(`[AddToCollection] Scheduling embedding update for item: ${item.id}`);
+  void UpdateEmbedding({ ctx, itemId: item.id }).catch((error) => {
+    console.error(
+      `[AddToCollection] Background embedding update failed for ${item.id}:`,
+      error,
+    );
+  });
 
   if (input.comment) {
     console.log(`[AddToCollection] Creating comment for item: ${item.id}`);

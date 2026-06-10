@@ -32,8 +32,10 @@ export const GetItemEmbedding = async (props: {
     itemId,
   );
 
-  if (!result[0]) {
-    throw new Error(`Item with ID ${itemId} not found.`);
+  if (!result[0]?.embedding) {
+    throw new Error(
+      `Item with ID ${itemId} has no embedding yet. Try again in a few seconds.`,
+    );
   }
 
   return JSON.parse(result[0].embedding) as number[];
