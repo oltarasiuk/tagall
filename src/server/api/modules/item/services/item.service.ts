@@ -189,32 +189,40 @@ async function CreateItem(props: {
   const transactionStartTime = Date.now();
   const transactionResult = await ctx.db.$transaction(
     async (prisma) => {
-      // Double-check if item was created by another request
-      const oldItem = await prisma.item.findFirst({
-        where: {
-          parsedId,
-        },
-      });
-
-      if (oldItem) {
-        console.log(`[CreateItem] Item was created by another request: ${parsedId}`);
-        return oldItem;
+      let item;
+      try {
+        item = await prisma.item.create({
+          data: {
+            collectionId: collection.id,
+            title,
+            year: details.year as number,
+            description: details.description as string,
+            parsedId,
+            image,
+            externalRating:
+              typeof details.rating === "number"
+                ? normalizeExternalRating(details.rating)
+                : null,
+          },
+        });
+      } catch (error) {
+        // Unique violation on parsedId: another request created the item concurrently
+        if (
+          error &&
+          typeof error === "object" &&
+          "code" in error &&
+          (error as { code: string }).code === "P2002"
+        ) {
+          const oldItem = await prisma.item.findUnique({ where: { parsedId } });
+          if (oldItem) {
+            console.log(
+              `[CreateItem] Item was created by another request: ${parsedId}`,
+            );
+            return oldItem;
+          }
+        }
+        throw error;
       }
-
-      const item = await prisma.item.create({
-        data: {
-          collectionId: collection.id,
-          title,
-          year: details.year as number,
-          description: details.description as string,
-          parsedId,
-          image,
-          externalRating:
-            typeof details.rating === "number"
-              ? normalizeExternalRating(details.rating)
-              : null,
-        },
-      });
       console.log(`[CreateItem] Item created in DB: ${item.id} - "${item.title}"`);
 
       const keys = Object.keys(details);

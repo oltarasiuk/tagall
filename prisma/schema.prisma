@@ -103,7 +103,7 @@ model Item {
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
 
-    parsedId       String
+    parsedId       String @unique
     title          String
     image          String?
     year           Int?
@@ -118,7 +118,6 @@ model Item {
 
     @@index([updatedAt, createdAt])
     @@index([year, title])
-    @@index([parsedId])
     @@index([collectionId])
 }
 
