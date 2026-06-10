@@ -4,7 +4,9 @@ import type { CACHE_KEYS } from "../constants/cache-keys.const";
 import { buildCacheKey, type CacheKeyParams } from "./cache-key";
 
 let client: RedisClientType | null = null;
-let connectionFailed = false;
+let lastConnectionFailureAt = 0;
+
+const RECONNECT_BACKOFF_MS = 60_000;
 
 export const CACHE_TTL_SECONDS = {
   default: 60 * 60 * 24,
@@ -16,7 +18,13 @@ function isRedisConfigured(): boolean {
 }
 
 async function getClient(): Promise<RedisClientType | null> {
-  if (!isRedisConfigured() || connectionFailed) return null;
+  if (!isRedisConfigured()) return null;
+  if (
+    lastConnectionFailureAt &&
+    Date.now() - lastConnectionFailureAt < RECONNECT_BACKOFF_MS
+  ) {
+    return null;
+  }
   if (client) return client;
 
   client = createClient({
@@ -37,12 +45,15 @@ async function getClient(): Promise<RedisClientType | null> {
   try {
     await client.connect();
   } catch {
-    console.warn("[Redis] Unavailable, running without cache");
-    connectionFailed = true;
+    console.warn(
+      `[Redis] Unavailable, running without cache (retry in ${RECONNECT_BACKOFF_MS / 1000}s)`,
+    );
+    lastConnectionFailureAt = Date.now();
     client = null;
     return null;
   }
 
+  lastConnectionFailureAt = 0;
   return client;
 }
 
