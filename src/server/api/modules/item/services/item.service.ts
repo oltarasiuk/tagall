@@ -37,6 +37,7 @@ import {
   getUserItemsStatusStats,
 } from "./item-stats.service";
 import { normalizeText } from "~/utils/normalize-text";
+import { MAX_ALL_USER_ITEMS } from "~/constants/limits.const";
 import { normalizeExternalRating } from "../utils/normalize-external-rating.util";
 import { assertPublicUrl } from "../../../helpers";
 import {
@@ -377,6 +378,7 @@ export async function GetAllUserItems(props: {
         },
       },
     },
+    take: MAX_ALL_USER_ITEMS,
   });
 
   return ItemResponse.transformTierItems(userItems);
