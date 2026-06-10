@@ -90,7 +90,7 @@ export async function AddItemComment(props: {
       title: input.title ? input.title : null,
       description: input.description ? input.description : null,
       userToItemId: userToItem.id,
-      rate: input.rate ? input.rate : null,
+      rate: input.rate ?? null,
       status: input.status,
     },
     include: {

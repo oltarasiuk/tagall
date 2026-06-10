@@ -905,7 +905,7 @@ export async function AddToCollection(props: {
     data: {
       userId: ctx.session.user.id,
       itemId: item.id,
-      rate: input.rate ? input.rate : null,
+      rate: input.rate ?? null,
       status: input.status,
       ...(input.tagsIds?.length && {
         tags: {
