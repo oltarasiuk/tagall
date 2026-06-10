@@ -39,6 +39,10 @@ import {
 import { normalizeText } from "~/utils/normalize-text";
 import { normalizeExternalRating } from "../utils/normalize-external-rating.util";
 import { assertPublicUrl } from "../../../helpers";
+import {
+  buildUserItemsWhere,
+  buildUserItemsOrderBy,
+} from "../utils/build-user-items-query.util";
 
 const ItemResponse = new ItemResponseClass();
 
@@ -337,168 +341,10 @@ export async function GetUserItems(props: {
 
   const limit = input.limit ?? 20;
   const page = input.page ?? 1;
-  const rates = input.filtering?.filter((f) => f.name === "rate") ?? [];
-  const statuses = input.filtering?.filter((f) => f.name === "status") ?? [];
-  const years = input.filtering?.filter((f) => f.name === "year") ?? [];
-  const fields = input.filtering?.filter((f) => f.name === "field") ?? [];
-  const tags = input.filtering?.filter((f) => f.name === "tag") ?? [];
-
-  const rateFromFilter = rates.find((f) => f.type === "from");
-  const rateToFilter = rates.find((f) => f.type === "to");
-  const yearFromFilter = years.find((f) => f.type === "from");
-  const yearToFilter = years.find((f) => f.type === "to");
-  const statusIncludeFilter = statuses.filter((f) => f.type === "include");
-  const statusExcludeFilter = statuses.filter((f) => f.type === "exclude");
-  const includeFieldsIds = fields
-    .filter((f) => f.type === "include")
-    .map((f) => f.fieldId);
-  const excludeFieldsIds = fields
-    .filter((f) => f.type === "exclude")
-    .map((f) => f.fieldId);
-  const includeTagIds = tags
-    .filter((f) => f.type === "include")
-    .map((f) => f.tagId);
-  const excludeTagIds = tags
-    .filter((f) => f.type === "exclude")
-    .map((f) => f.tagId);
 
   const userItems = await ctx.db.userToItem.findMany({
-    where: {
-      userId: ctx.session.user.id,
-      ...((rateFromFilter || rateToFilter) && {
-        rate: {
-          ...(rateToFilter && {
-            lte: rateToFilter.value,
-          }),
-          ...(rateFromFilter && {
-            gte: rateFromFilter.value,
-          }),
-        },
-      }),
-      ...((statusIncludeFilter?.length || statusExcludeFilter?.length) && {
-        status: {
-          ...(statusIncludeFilter?.length && {
-            in: statusIncludeFilter.map((filter) => filter.value),
-          }),
-          ...(statusExcludeFilter?.length && {
-            not: {
-              in: statusExcludeFilter.map((filter) => filter.value),
-            },
-          }),
-        },
-      }),
-
-      ...(includeTagIds.length && {
-        AND: includeTagIds.map((tagId) => ({
-          tags: {
-            some: {
-              id: tagId,
-            },
-          },
-        })),
-      }),
-      ...(excludeTagIds.length && {
-        tags: {
-          none: {
-            id: {
-              in: excludeTagIds,
-            },
-          },
-        },
-      }),
-
-      item: {
-        ...(input.search && {
-          title: {
-            contains: input.search,
-            mode: "insensitive",
-          },
-        }),
-        ...(input.collectionsIds?.length && {
-          collectionId: {
-            in: input.collectionsIds,
-          },
-        }),
-        ...((yearFromFilter || yearToFilter) && {
-          year: {
-            ...(yearToFilter && {
-              lte: yearToFilter.value,
-            }),
-            ...(yearFromFilter && {
-              gte: yearFromFilter.value,
-            }),
-          },
-        }),
-        ...(includeFieldsIds.length && {
-          AND: includeFieldsIds.map((id) => ({
-            fields: {
-              some: {
-                id,
-              },
-            },
-          })),
-        }),
-        ...(excludeFieldsIds.length && {
-          fields: {
-            none: {
-              id: {
-                in: excludeFieldsIds,
-              },
-            },
-          },
-        }),
-      },
-    },
-
-    ...(input.sorting && {
-      ...(input.sorting.name === "rate" && {
-        orderBy: [
-          {
-            rate: {
-              sort: input.sorting.type,
-              nulls: "last",
-            },
-          },
-          { item: { title: "asc" } },
-        ],
-      }),
-      ...(input.sorting.name === "status" && {
-        orderBy: [{ status: input.sorting.type }, { item: { title: "asc" } }],
-      }),
-      ...(input.sorting.name === "date" && {
-        orderBy: [
-          { updatedAt: input.sorting.type },
-          { item: { title: "asc" } },
-        ],
-      }),
-      ...(input.sorting.name === "year" && {
-        orderBy: [
-          {
-            item: {
-              year: {
-                sort: input.sorting.type,
-                nulls: "last",
-              },
-            },
-          },
-          { item: { title: "asc" } },
-        ],
-      }),
-      ...(input.sorting.name === "title" && {
-        orderBy: [
-          { item: { title: input.sorting.type } },
-          {
-            item: {
-              year: {
-                sort: "desc",
-                nulls: "last",
-              },
-            },
-          },
-        ],
-      }),
-    }),
-
+    where: buildUserItemsWhere(ctx.session.user.id, input),
+    orderBy: buildUserItemsOrderBy(input.sorting),
     include: {
       tags: true,
       item: {
@@ -507,7 +353,6 @@ export async function GetUserItems(props: {
         },
       },
     },
-
     take: limit,
     skip: (page - 1) * limit,
   });
@@ -521,168 +366,9 @@ export async function GetAllUserItems(props: {
 }): Promise<TierItemType[]> {
   const { ctx, input } = props;
 
-  const rates = input.filtering?.filter((f) => f.name === "rate") ?? [];
-  const statuses = input.filtering?.filter((f) => f.name === "status") ?? [];
-  const years = input.filtering?.filter((f) => f.name === "year") ?? [];
-  const fields = input.filtering?.filter((f) => f.name === "field") ?? [];
-  const tags = input.filtering?.filter((f) => f.name === "tag") ?? [];
-
-  const rateFromFilter = rates.find((f) => f.type === "from");
-  const rateToFilter = rates.find((f) => f.type === "to");
-  const yearFromFilter = years.find((f) => f.type === "from");
-  const yearToFilter = years.find((f) => f.type === "to");
-  const statusIncludeFilter = statuses.filter((f) => f.type === "include");
-  const statusExcludeFilter = statuses.filter((f) => f.type === "exclude");
-  const includeFieldsIds = fields
-    .filter((f) => f.type === "include")
-    .map((f) => f.fieldId);
-  const excludeFieldsIds = fields
-    .filter((f) => f.type === "exclude")
-    .map((f) => f.fieldId);
-  const includeTagIds = tags
-    .filter((f) => f.type === "include")
-    .map((f) => f.tagId);
-  const excludeTagIds = tags
-    .filter((f) => f.type === "exclude")
-    .map((f) => f.tagId);
-
   const userItems = await ctx.db.userToItem.findMany({
-    where: {
-      userId: ctx.session.user.id,
-      ...((rateFromFilter || rateToFilter) && {
-        rate: {
-          ...(rateToFilter && {
-            lte: rateToFilter.value,
-          }),
-          ...(rateFromFilter && {
-            gte: rateFromFilter.value,
-          }),
-        },
-      }),
-      ...((statusIncludeFilter?.length || statusExcludeFilter?.length) && {
-        status: {
-          ...(statusIncludeFilter?.length && {
-            in: statusIncludeFilter.map((filter) => filter.value),
-          }),
-          ...(statusExcludeFilter?.length && {
-            not: {
-              in: statusExcludeFilter.map((filter) => filter.value),
-            },
-          }),
-        },
-      }),
-
-      ...(includeTagIds.length && {
-        AND: includeTagIds.map((tagId) => ({
-          tags: {
-            some: {
-              id: tagId,
-            },
-          },
-        })),
-      }),
-      ...(excludeTagIds.length && {
-        tags: {
-          none: {
-            id: {
-              in: excludeTagIds,
-            },
-          },
-        },
-      }),
-
-      item: {
-        ...(input.search && {
-          title: {
-            contains: input.search,
-            mode: "insensitive",
-          },
-        }),
-        ...(input.collectionsIds?.length && {
-          collectionId: {
-            in: input.collectionsIds,
-          },
-        }),
-        ...((yearFromFilter || yearToFilter) && {
-          year: {
-            ...(yearToFilter && {
-              lte: yearToFilter.value,
-            }),
-            ...(yearFromFilter && {
-              gte: yearFromFilter.value,
-            }),
-          },
-        }),
-        ...(includeFieldsIds.length && {
-          AND: includeFieldsIds.map((id) => ({
-            fields: {
-              some: {
-                id,
-              },
-            },
-          })),
-        }),
-        ...(excludeFieldsIds.length && {
-          fields: {
-            none: {
-              id: {
-                in: excludeFieldsIds,
-              },
-            },
-          },
-        }),
-      },
-    },
-
-    ...(input.sorting && {
-      ...(input.sorting.name === "rate" && {
-        orderBy: [
-          {
-            rate: {
-              sort: input.sorting.type,
-              nulls: "last",
-            },
-          },
-          { item: { title: "asc" } },
-        ],
-      }),
-      ...(input.sorting.name === "status" && {
-        orderBy: [{ status: input.sorting.type }, { item: { title: "asc" } }],
-      }),
-      ...(input.sorting.name === "date" && {
-        orderBy: [
-          { updatedAt: input.sorting.type },
-          { item: { title: "asc" } },
-        ],
-      }),
-      ...(input.sorting.name === "year" && {
-        orderBy: [
-          {
-            item: {
-              year: {
-                sort: input.sorting.type,
-                nulls: "last",
-              },
-            },
-          },
-          { item: { title: "asc" } },
-        ],
-      }),
-      ...(input.sorting.name === "title" && {
-        orderBy: [
-          { item: { title: input.sorting.type } },
-          {
-            item: {
-              year: {
-                sort: "desc",
-                nulls: "last",
-              },
-            },
-          },
-        ],
-      }),
-    }),
-
+    where: buildUserItemsWhere(ctx.session.user.id, input),
+    orderBy: buildUserItemsOrderBy(input.sorting),
     include: {
       tags: true,
       item: {
@@ -1131,112 +817,8 @@ export async function GetRandomUserItems(props: {
 
   const limit = input.limit ?? 12;
 
-  const rates = input.filtering?.filter((f) => f.name === "rate") ?? [];
-  const statuses = input.filtering?.filter((f) => f.name === "status") ?? [];
-  const years = input.filtering?.filter((f) => f.name === "year") ?? [];
-  const fields = input.filtering?.filter((f) => f.name === "field") ?? [];
-  const tags = input.filtering?.filter((f) => f.name === "tag") ?? [];
-
-  const rateFromFilter = rates.find((f) => f.type === "from");
-  const rateToFilter = rates.find((f) => f.type === "to");
-  const yearFromFilter = years.find((f) => f.type === "from");
-  const yearToFilter = years.find((f) => f.type === "to");
-  const statusIncludeFilter = statuses.filter((f) => f.type === "include");
-  const statusExcludeFilter = statuses.filter((f) => f.type === "exclude");
-  const includeFieldsIds = fields
-    .filter((f) => f.type === "include")
-    .map((f) => f.fieldId);
-  const excludeFieldsIds = fields
-    .filter((f) => f.type === "exclude")
-    .map((f) => f.fieldId);
-  const includeTagIds = tags
-    .filter((f) => f.type === "include")
-    .map((f) => f.tagId);
-  const excludeTagIds = tags
-    .filter((f) => f.type === "exclude")
-    .map((f) => f.tagId);
-
   const radndomUserItems = await ctx.db.userToItem.findManyRandom(limit, {
-    where: {
-      userId: ctx.session.user.id,
-      ...((rateFromFilter || rateToFilter) && {
-        rate: {
-          ...(rateToFilter && {
-            lte: rateToFilter.value,
-          }),
-          ...(rateFromFilter && {
-            gte: rateFromFilter.value,
-          }),
-        },
-      }),
-      ...((statusIncludeFilter?.length || statusExcludeFilter?.length) && {
-        status: {
-          ...(statusIncludeFilter?.length && {
-            in: statusIncludeFilter.map((filter) => filter.value),
-          }),
-          ...(statusExcludeFilter?.length && {
-            not: {
-              in: statusExcludeFilter.map((filter) => filter.value),
-            },
-          }),
-        },
-      }),
-
-      ...(includeTagIds.length && {
-        AND: includeTagIds.map((tagId) => ({
-          tags: {
-            some: {
-              id: tagId,
-            },
-          },
-        })),
-      }),
-      ...(excludeTagIds.length && {
-        tags: {
-          none: {
-            id: {
-              in: excludeTagIds,
-            },
-          },
-        },
-      }),
-
-      item: {
-        ...(input.collectionsIds?.length && {
-          collectionId: {
-            in: input.collectionsIds,
-          },
-        }),
-        ...((yearFromFilter || yearToFilter) && {
-          year: {
-            ...(yearToFilter && {
-              lte: yearToFilter.value,
-            }),
-            ...(yearFromFilter && {
-              gte: yearFromFilter.value,
-            }),
-          },
-        }),
-        ...(includeFieldsIds.length && {
-          AND: includeFieldsIds.map((id) => ({
-            fields: {
-              some: {
-                id,
-              },
-            },
-          })),
-        }),
-        ...(excludeFieldsIds.length && {
-          fields: {
-            none: {
-              id: {
-                in: excludeFieldsIds,
-              },
-            },
-          },
-        }),
-      },
-    },
+    where: buildUserItemsWhere(ctx.session.user.id, input),
     select: {
       id: true,
     },
