@@ -75,10 +75,21 @@ export async function UpdateTag(props: {
 }) {
   const { ctx, input } = props;
 
-  // Normalize tag name: lowercase + trim for consistency
-  const normalizedName = normalizeText(input.name);
+  const tag = await ctx.db.tag.findUnique({
+    where: {
+      id: input.id,
+    },
+  });
 
-  if (!normalizedName) {
+  if (tag?.userId !== ctx.session.user.id) {
+    throw new Error("Tag not found!");
+  }
+
+  // Normalize tag name: lowercase + trim for consistency
+  const normalizedName =
+    input.name !== undefined ? normalizeText(input.name) : undefined;
+
+  if (input.name !== undefined && !normalizedName) {
     throw new Error("Tag name cannot be empty!");
   }
 
@@ -87,7 +98,7 @@ export async function UpdateTag(props: {
       id: input.id,
     },
     data: {
-      name: normalizedName,
+      ...(normalizedName && { name: normalizedName }),
       ...(input.collectionsIds?.length && {
         collections: {
           set: input.collectionsIds?.map((id) => ({ id })),
@@ -111,7 +122,7 @@ export async function DeleteTag(props: {
     },
   });
 
-  if (!tag) {
+  if (tag?.userId !== ctx.session.user.id) {
     throw new Error("Tag not found!");
   }
 
