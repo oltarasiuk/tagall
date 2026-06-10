@@ -315,7 +315,7 @@ async function CreateItem(props: {
 
       return item;
     },
-    { timeout: 180_000 }, // Increased timeout from 120s to 180s (3 minutes)
+    { timeout: 15_000 }, // DB-only work inside the transaction; external calls happen before it
   );
 
   const transactionDuration = Date.now() - transactionStartTime;
