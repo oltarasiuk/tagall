@@ -28,6 +28,7 @@ export const CACHE_KEYS = {
       input: true,
     },
     getNearestItems: {
+      userId: true,
       input: true,
     },
     getYearsRange: {

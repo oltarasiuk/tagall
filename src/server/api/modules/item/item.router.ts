@@ -111,12 +111,13 @@ export const ItemRouter = createTRPCRouter({
   getNearestItems: protectedProcedure
     .input(GetNearestItemsInputSchema)
     .query(async (props) => {
-      const { input } = props;
+      const { ctx, input } = props;
       const response = await getOrSetCache(
         () => GetNearestItems(props),
         "item",
         "getNearestItems",
         {
+          userId: ctx.session.user.id,
           input,
         },
       );
