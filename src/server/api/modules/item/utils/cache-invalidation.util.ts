@@ -19,38 +19,44 @@ export async function invalidateItemCaches(
 ): Promise<void> {
   const { itemId, includeSearch } = options;
 
-  // Invalidate by userId only: cache keys are built with full input, so prefix must match all getUserItems for user
-  await deleteCache("item", "getUserItems", { userId });
-  await deleteCache("item", "getAllUserItems", { userId });
-  await deleteCache("item", "getPublicUserItems");
-  await deleteCache("item", "getPublicAllUserItems");
-  await deleteCache("item", "getPublicRandomUserItems");
+  const deletions: Promise<void>[] = [
+    // Invalidate by userId only: cache keys are built with full input, so prefix must match all getUserItems for user
+    deleteCache("item", "getUserItems", { userId }),
+    deleteCache("item", "getAllUserItems", { userId }),
+    deleteCache("item", "getPublicUserItems"),
+    deleteCache("item", "getPublicAllUserItems"),
+    deleteCache("item", "getPublicRandomUserItems"),
 
-  // Invalidate stats
-  await deleteCache("item", "getUserItemsStats", { userId });
-  await deleteCache("item", "getPublicUserItemsStats");
+    // Invalidate stats
+    deleteCache("item", "getUserItemsStats", { userId }),
+    deleteCache("item", "getPublicUserItemsStats"),
 
-  // Invalidate by userId only: cache keys use full input, prefix must match all entries for user
-  await deleteCache("item", "getYearsRange", { userId });
-  await deleteCache("field", "getFilterFields", { userId });
-  await deleteCache("item", "getPublicYearsRange");
-  await deleteCache("field", "getPublicFilterFields");
-  await deleteCache("collection", "getPublicUserCollections");
+    // Invalidate by userId only: cache keys use full input, prefix must match all entries for user
+    deleteCache("item", "getYearsRange", { userId }),
+    deleteCache("field", "getFilterFields", { userId }),
+    deleteCache("item", "getPublicYearsRange"),
+    deleteCache("field", "getPublicFilterFields"),
+    deleteCache("collection", "getPublicUserCollections"),
+
+    // Always clear nearest items
+    deleteCache("item", "getNearestItems"),
+  ];
 
   // Invalidate specific item if provided
   if (itemId) {
-    await deleteCache("item", "getUserItem", {
-      userId,
-      input: itemId,
-    });
+    deletions.push(
+      deleteCache("item", "getUserItem", {
+        userId,
+        input: itemId,
+      }),
+    );
   }
 
   // Invalidate search caches if requested
   if (includeSearch) {
-    await deleteCache("parse", "search", { userId });
-    await deleteCache("parse", "regrex", { userId });
+    deletions.push(deleteCache("parse", "search", { userId }));
+    deletions.push(deleteCache("parse", "regrex", { userId }));
   }
 
-  // Always clear nearest items (no user-specific key)
-  await deleteCache("item", "getNearestItems");
+  await Promise.all(deletions);
 }

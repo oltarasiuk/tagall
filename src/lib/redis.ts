@@ -107,12 +107,23 @@ async function deleteCacheByPrefix(keyPrefix: string): Promise<void> {
   let totalDeleted = 0;
   const batchSize = 100;
 
+  let batch: string[] = [];
+
   for await (const key of redis.scanIterator({
     MATCH: `${keyPrefix}*`,
     COUNT: batchSize,
   })) {
-    await redis.del(key);
-    totalDeleted++;
+    batch.push(String(key));
+    if (batch.length >= batchSize) {
+      await redis.del(batch);
+      totalDeleted += batch.length;
+      batch = [];
+    }
+  }
+
+  if (batch.length > 0) {
+    await redis.del(batch);
+    totalDeleted += batch.length;
   }
 
   const duration = Date.now() - startTime;
