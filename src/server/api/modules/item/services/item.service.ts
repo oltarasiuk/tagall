@@ -38,6 +38,7 @@ import {
 } from "./item-stats.service";
 import { normalizeText } from "~/utils/normalize-text";
 import { normalizeExternalRating } from "../utils/normalize-external-rating.util";
+import { assertPublicUrl } from "../../../helpers";
 
 const ItemResponse = new ItemResponseClass();
 
@@ -1009,6 +1010,7 @@ export async function UpdateItemImage(props: {
   let newImageId: string | null = null;
 
   if (input.imageUrl) {
+    await assertPublicUrl(input.imageUrl);
     newImageId = await UploadImageByUrl(item.collection.name, input.imageUrl);
   } else if (input.imageBase64) {
     newImageId = await UploadImageByBase64(

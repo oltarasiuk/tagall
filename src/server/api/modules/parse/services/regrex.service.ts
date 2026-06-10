@@ -1,11 +1,13 @@
 import * as cheerio from "cheerio";
 import axios from "axios";
+import { assertPublicUrl } from "../../../helpers";
 import { GetSelectorAndRegex } from "../../open-ai/services";
 import type { ContextType } from "../../../../types";
 import type { Prisma } from "@prisma/client";
 import type { ParseRegrexInputType, ParseRegrexResult } from "../types";
 
 async function getHtmlFromUrl(url: string): Promise<string> {
+  await assertPublicUrl(url);
   try {
     const response = await axios.get(url, {
       headers: {
@@ -14,6 +16,8 @@ async function getHtmlFromUrl(url: string): Promise<string> {
           "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
         Accept: "text/html",
       },
+      maxRedirects: 0,
+      timeout: 15_000,
     });
     return response.data as string;
   } catch (error) {
