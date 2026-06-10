@@ -120,6 +120,10 @@ export async function UpdateItemComment(props: {
     throw new Error("Comment not found!");
   }
 
+  if (itemComment.userToItem.userId !== ctx.session.user.id) {
+    throw new Error("Comment not found!");
+  }
+
   await ctx.db.item.update({
     where: {
       id: itemComment.userToItem.itemId,
@@ -162,6 +166,10 @@ export async function DeleteItemComment(props: {
   });
 
   if (!itemComment) {
+    throw new Error("Comment not found!");
+  }
+
+  if (itemComment.userToItem.userId !== ctx.session.user.id) {
     throw new Error("Comment not found!");
   }
 
