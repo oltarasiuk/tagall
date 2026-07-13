@@ -12,7 +12,7 @@ export default async function Profile() {
   void api.item.getUserItemsStats.prefetch(params.collectionsIds);
   return (
     <HydrateClient>
-      <BackgroundImage image="/posters6.webp">
+      <BackgroundImage image="/posters6-bg.webp">
         <ProfileContainer />
       </BackgroundImage>
     </HydrateClient>

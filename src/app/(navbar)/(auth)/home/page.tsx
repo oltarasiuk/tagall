@@ -17,7 +17,7 @@ export default async function Home() {
 
   return (
     <HydrateClient>
-      <BackgroundImage image="/posters3.webp">
+      <BackgroundImage image="/posters3-bg.webp">
         <HomeContainer />
       </BackgroundImage>
     </HydrateClient>

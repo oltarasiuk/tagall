@@ -5,7 +5,7 @@ import { SearchContainer } from "../../../_components/modules";
 export default function SearchPage() {
   return (
     <HydrateClient>
-      <BackgroundImage image="/posters4.webp">
+      <BackgroundImage image="/posters4-bg.webp">
         <SearchContainer />
       </BackgroundImage>
     </HydrateClient>

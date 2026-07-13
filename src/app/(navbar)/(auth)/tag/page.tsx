@@ -7,7 +7,7 @@ export default async function Tag() {
   void api.tag.getUserTags.prefetch();
   return (
     <HydrateClient>
-      <BackgroundImage image="/posters2.webp">
+      <BackgroundImage image="/posters2-bg.webp">
         <TagContainer />
       </BackgroundImage>
     </HydrateClient>

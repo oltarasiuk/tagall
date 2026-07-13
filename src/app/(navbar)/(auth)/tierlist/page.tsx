@@ -20,7 +20,7 @@ export default async function TierListPage() {
 
   return (
     <HydrateClient>
-      <BackgroundImage image="/posters5.webp">
+      <BackgroundImage image="/posters5-bg.webp">
         <TierListContainer />
       </BackgroundImage>
     </HydrateClient>

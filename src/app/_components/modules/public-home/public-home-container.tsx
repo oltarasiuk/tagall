@@ -77,13 +77,13 @@ export function PublicHomeContainer() {
   const backgroundImage = useMemo(() => {
     switch (viewMode) {
       case "standard":
-        return "/posters9.webp";
+        return "/posters9-bg.webp";
       case "tierlist":
-        return "/posters8.webp";
+        return "/posters8-bg.webp";
       case "random":
-        return "/posters10.webp";
+        return "/posters10-bg.webp";
       default:
-        return "/posters10.webp";
+        return "/posters10-bg.webp";
     }
   }, [viewMode]);
 

@@ -19,7 +19,7 @@ export default async function Random() {
   void api.field.getFilterFields.prefetch(params.collectionsIds);
   return (
     <HydrateClient>
-      <BackgroundImage image="/posters7.webp">
+      <BackgroundImage image="/posters7-bg.webp">
         <RandomContainer />
       </BackgroundImage>
     </HydrateClient>

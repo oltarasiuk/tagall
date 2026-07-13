@@ -14,7 +14,7 @@ export default async function Add() {
   void api.collection.getAll.prefetch();
   return (
     <HydrateClient>
-      <BackgroundImage image="/posters5.webp">
+      <BackgroundImage image="/posters5-bg.webp">
         <ParseContainer />
       </BackgroundImage>
     </HydrateClient>

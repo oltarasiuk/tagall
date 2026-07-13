@@ -15,7 +15,7 @@ export default async function Item({ params }: { params: { itemId: string } }) {
 
   return (
     <HydrateClient>
-      <BackgroundImage image="/posters9.webp">
+      <BackgroundImage image="/posters9-bg.webp">
         <ItemContainer itemId={itemId} />
       </BackgroundImage>
     </HydrateClient>
