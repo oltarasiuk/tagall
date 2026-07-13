@@ -15,6 +15,7 @@ import type { ItemStatus } from "@prisma/client";
 import type { TagType } from "../../../server/api/modules/tag/types/tag.type";
 import type { FilterFieldsType } from "../../../server/api/modules/field/types";
 import { GrainCardContainer } from "./grain-card-container";
+import { capitalize } from "../../../lib";
 
 type Props = {
   searchFilter: string;
@@ -52,10 +53,9 @@ export const FilterDialog = (props: Props) => {
     tag.name.toLowerCase().includes(searchFilter.toLowerCase()),
   );
 
-  const filteredStatuses = STATUS_VALUES.map((status) => [
-    status,
-    STATUS_NAMES[status],
-  ] as const).filter(([_, name]) =>
+  const filteredStatuses = STATUS_VALUES.map(
+    (status) => [status, STATUS_NAMES[status]] as const,
+  ).filter(([_, name]) =>
     name.toLowerCase().includes(searchFilter.toLowerCase()),
   );
 
@@ -265,7 +265,7 @@ export const FilterDialog = (props: Props) => {
                         size={"sm"}
                         onClick={() => onClickTags(tag.id, tag.name)}
                       >
-                        {tag.name}
+                        {capitalize(tag.name)}
                       </Button>
                     );
                   })}
@@ -275,7 +275,7 @@ export const FilterDialog = (props: Props) => {
 
             {filteredFieldGroups.map((fieldGroup) => (
               <div key={fieldGroup.id} className="flex flex-col gap-2">
-                <Header vtag="h6">{fieldGroup.name}</Header>
+                <Header vtag="h6">{capitalize(fieldGroup.name)}</Header>
                 <div className="flex flex-wrap gap-2">
                   {fieldGroup.fields.map((field) => {
                     const fieldFilter = filtering.find(
@@ -294,7 +294,7 @@ export const FilterDialog = (props: Props) => {
                         size={"sm"}
                         onClick={() => onClickField(field.id, field.value)}
                       >
-                        {field.value}
+                        {capitalize(field.value)}
                       </Button>
                     );
                   })}

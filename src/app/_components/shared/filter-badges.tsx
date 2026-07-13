@@ -3,6 +3,7 @@ import { Badge } from "../ui";
 import type { GetUserItemsFilterType } from "../../../server/api/modules/item/types";
 import { STATUS_NAMES } from "../../../constants";
 import { GrainCardContainer } from "./grain-card-container";
+import { capitalize } from "../../../lib";
 
 type Props = {
   filtering: GetUserItemsFilterType;
@@ -54,8 +55,8 @@ const FilterBadges = (props: Props) => {
           case "field":
             badgeText =
               filter.type === "include"
-                ? `+ ${filter.value}`
-                : `- ${filter.value}`;
+                ? `+ ${capitalize(filter.value)}`
+                : `- ${capitalize(filter.value)}`;
             break;
         }
 
@@ -84,7 +85,7 @@ const FilterBadges = (props: Props) => {
       })}
       <Badge
         variant="destructive"
-        className="cursor-pointer px-3 hover:opacity-80 text-sm"
+        className="cursor-pointer px-3 text-sm hover:opacity-80"
         onClick={removeAllFilters}
       >
         Clear
