@@ -32,10 +32,12 @@ import { z } from "zod";
 import { GetUserItemsInputSchema } from "../../../../server/api/modules/item/schemas";
 import { api } from "../../../../trpc/react";
 
+type HomeItemSize = ItemSize | "edit";
+
 export const HomeParamsSchema = GetUserItemsInputSchema._def.innerType
   .pick({ collectionsIds: true, filtering: true, sorting: true })
   .extend({
-    itemSize: z.enum(["medium", "list", "small", "large", "edit"]).optional(),
+    itemSize: z.enum(["medium", "large", "edit"]).optional(),
   })
   .default({});
 
@@ -63,7 +65,7 @@ function HomeContainer() {
   const [filtering, setFiltering] = useState<GetUserItemsFilterType>(
     getParam("filtering"),
   );
-  const [itemSize, setItemSize] = useState<ItemSize>(getParam("itemSize"));
+  const [itemSize, setItemSize] = useState<HomeItemSize>(getParam("itemSize"));
   const [sorting, setSorting] = useState<GetUserItemsSortType>(
     getParam("sorting"),
   );
@@ -131,7 +133,10 @@ function HomeContainer() {
           selectedCollectionsIds={selectedCollectionsIds}
           setSelectedCollectionsIds={setSelectedCollectionsIds}
         />
-        <HomeItemSizeTabs itemSize={itemSize} setItemSize={setItemSize} />
+        <HomeItemSizeTabs
+          itemSize={itemSize === "edit" ? "large" : itemSize}
+          setItemSize={setItemSize}
+        />
 
         <HomeSortSelect setSorting={setSorting} sorting={sorting} />
 
@@ -158,14 +163,16 @@ function HomeContainer() {
 
       <FilterBadges filtering={filtering} setFiltering={setFiltering} />
       {groupedItems.map((group, index) => (
-        <div key={group.groupBy || `group-${index}`} className="flex flex-col gap-4">
+        <div
+          key={group.groupBy || `group-${index}`}
+          className="flex flex-col gap-4"
+        >
           {group.groupBy ? <Header vtag="h3">{group.groupBy}</Header> : null}
           <HomeItems
             tags={tags}
             items={group.items}
             itemSize={itemSize}
             selectedCollectionsIds={debouncedSelectedCollectionsIds}
-            sorting={sorting}
           />
         </div>
       ))}

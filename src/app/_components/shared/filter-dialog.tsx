@@ -66,7 +66,12 @@ export const FilterDialog = (props: Props) => {
         field.value.toLowerCase().includes(searchFilter.toLowerCase()),
       ),
     }))
-    .filter((fieldGroup) => fieldGroup.fields.length > 0);
+    .filter(
+      (fieldGroup) =>
+        fieldGroup.fields.length > 0 &&
+        (searchFilter.trim().length > 0 ||
+          !["people", "studios"].includes(fieldGroup.name.toLowerCase())),
+    );
 
   const onClickStatus = (status: ItemStatus) => {
     setFiltering((prev) => {

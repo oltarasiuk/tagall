@@ -26,7 +26,7 @@ const HomeLargeItem = (props: Props) => {
         <div className="pointer-events-none absolute inset-0 overflow-hidden">
           <CloudinaryImage
             variant="background"
-            className="!aspect-auto h-full w-full rounded-none border-0 object-cover opacity-5 blur-sm shadow-none"
+            className="!aspect-auto h-full w-full rounded-none border-0 object-cover opacity-5 shadow-none blur-sm"
             publicId={item.image}
             folder={item.collection.name}
           />
@@ -36,7 +36,10 @@ const HomeLargeItem = (props: Props) => {
       {/* Grain overlay */}
       <div
         className="pointer-events-none absolute inset-0 z-[1] opacity-[0.035]"
-        style={{ backgroundImage: "url('/halftone.png')", backgroundRepeat: "repeat" }}
+        style={{
+          backgroundImage: "url('/halftone.png')",
+          backgroundRepeat: "repeat",
+        }}
       />
 
       {/* Poster */}
@@ -61,30 +64,26 @@ const HomeLargeItem = (props: Props) => {
           </Header>
           <div className="flex flex-shrink-0 items-center gap-1.5">
             <ItemTypeBadge collectionName={item.collection.name} />
-            {selectedCollectionsIds.length > 1 && !TYPE_BADGE_STYLES[item.collection.name] && (
-              <Badge variant="outline" className="text-xs text-muted-foreground">
-                {item.collection.name}
-              </Badge>
-            )}
+            {selectedCollectionsIds.length > 1 &&
+              !TYPE_BADGE_STYLES[item.collection.name] && (
+                <Badge
+                  variant="outline"
+                  className="text-xs text-muted-foreground"
+                >
+                  {item.collection.name}
+                </Badge>
+              )}
           </div>
         </div>
 
         {/* Description */}
         {item.description && (
-          <Paragraph vsize="sm" className="line-clamp-3 leading-relaxed text-muted-foreground">
+          <Paragraph
+            vsize="sm"
+            className="line-clamp-3 leading-relaxed text-muted-foreground"
+          >
             {item.description}
           </Paragraph>
-        )}
-
-        {/* Tags */}
-        {item.tags.length > 0 && (
-          <div className="flex flex-wrap gap-1.5">
-            {item.tags.map((tag) => (
-              <Badge key={tag.id} className="text-xs">
-                {tag.name}
-              </Badge>
-            ))}
-          </div>
         )}
 
         {/* Bottom row: status · ★ rating · external rating · year */}
@@ -96,7 +95,10 @@ const HomeLargeItem = (props: Props) => {
           ) : null}
 
           {item.externalRating != null && (
-            <ItemExternalRatingBadge rating={item.externalRating} className="text-base text-red-500" />
+            <ItemExternalRatingBadge
+              rating={item.externalRating}
+              className="text-base text-red-500"
+            />
           )}
 
           {item.year && (

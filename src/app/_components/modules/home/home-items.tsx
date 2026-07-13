@@ -1,31 +1,21 @@
 import React from "react";
-import type {
-  GetUserItemsSortType,
-  ItemType,
-} from "../../../../server/api/modules/item/types";
+import type { ItemType } from "../../../../server/api/modules/item/types";
 import Link from "next/link";
-import {
-  HomeListItem,
-  HomeLargeItem,
-  HomeMediumItem,
-  HomeSmallItem,
-  HomeEditItem,
-} from "./items-sizes";
-import { CardContainer } from "../../shared";
+import { HomeLargeItem, HomeMediumItem, HomeEditItem } from "./items-sizes";
 import type { ItemSize } from "./home-items-size-tabs";
 import type { TagType } from "../../../../server/api/modules/tag/types";
 
+type HomeItemSize = ItemSize | "edit";
+
 type Props = {
-  itemSize: ItemSize;
+  itemSize: HomeItemSize;
   items: ItemType[];
   tags: TagType[];
   selectedCollectionsIds: string[];
-  sorting: GetUserItemsSortType;
 };
 
 const HomeItems = (props: Props) => {
-  const { itemSize, items, selectedCollectionsIds, tags, sorting } = props;
-  const showTimeAgo = sorting.name !== "date";
+  const { itemSize, items, selectedCollectionsIds, tags } = props;
 
   return (
     <>
@@ -51,36 +41,6 @@ const HomeItems = (props: Props) => {
           ))}
         </div>
       )}
-      {itemSize === "small" && (
-        <div className="mx-auto grid w-full grid-cols-1 gap-y-4">
-          {items.map((item) => (
-            <Link key={item.id} href={`/item/${item.id}`}>
-              <HomeSmallItem
-                key={item.id}
-                item={item}
-                selectedCollectionsIds={selectedCollectionsIds}
-                showTimeAgo={showTimeAgo}
-              />
-            </Link>
-          ))}
-        </div>
-      )}
-
-      {itemSize === "list" && (
-        <CardContainer className="mx-auto grid w-full grid-cols-1 gap-y-1 p-8">
-          {items.map((item) => (
-            <Link key={item.id} href={`/item/${item.id}`}>
-              <HomeListItem
-                key={item.id}
-                item={item}
-                selectedCollectionsIds={selectedCollectionsIds}
-                showTimeAgo={showTimeAgo}
-              />
-            </Link>
-          ))}
-        </CardContainer>
-      )}
-
       {itemSize === "edit" && (
         <div className="mx-auto grid w-full grid-cols-1 gap-4 xl:grid-cols-2">
           {items.map((item) => (

@@ -1,11 +1,10 @@
 "use client";
 import { useState } from "react";
+import Link from "next/link";
 import {
-  CardContainer,
   CollectionsTabs,
   Container,
   FilterBadges,
-  ItemCard,
   FilterDialog,
   Loading,
   NoItemsCard,
@@ -23,14 +22,17 @@ import {
   useQueryParams,
   useYearsRange,
 } from "../../../../hooks";
-import type { z } from "zod";
+import { z } from "zod";
 import { GetRandomUserItemsInputSchema } from "../../../../server/api/modules/item/schemas";
 import { api } from "../../../../trpc/react";
 import type { GetUserItemsFilterType } from "../../../../server/api/modules/item/types";
 import { DEFAULT_RANDOM_LIMIT } from "../../../../constants";
+import { HomeItemSizeTabs, type ItemSize } from "../home/home-items-size-tabs";
+import { HomeLargeItem, HomeMediumItem } from "../home/items-sizes";
 
-export const RandomParamsSchema =
-  GetRandomUserItemsInputSchema._def.innerType.default({});
+export const RandomParamsSchema = GetRandomUserItemsInputSchema._def.innerType
+  .extend({ itemSize: z.enum(["medium", "large"]).optional() })
+  .default({});
 
 export type RandomParamsType = z.infer<typeof RandomParamsSchema>;
 
@@ -41,12 +43,14 @@ function RandomContainer() {
     schema: RandomParamsSchema,
     defaultParams: {
       limit: DEFAULT_RANDOM_LIMIT,
+      itemSize: "medium",
       filtering: [],
       collectionsIds: collections.map((collection) => collection.id),
     },
   });
 
   const [limit, setLimit] = useState<number>(getParam("limit"));
+  const [itemSize, setItemSize] = useState<ItemSize>(getParam("itemSize"));
   const [filtering, setFiltering] = useState<GetUserItemsFilterType>(
     getParam("filtering"),
   );
@@ -62,6 +66,7 @@ function RandomContainer() {
     {
       collectionsIds: selectedCollectionsIds,
       filtering,
+      itemSize,
     },
     setQueryParams,
   );
@@ -113,8 +118,9 @@ function RandomContainer() {
           selectedCollectionsIds={selectedCollectionsIds}
           setSelectedCollectionsIds={setSelectedCollectionsIds}
         />
+        <HomeItemSizeTabs itemSize={itemSize} setItemSize={setItemSize} />
 
-<GrainCardContainer className="w-64">
+        <GrainCardContainer className="w-64">
           <DualRangeSlider
             value={[limit]}
             onValueChange={(value) => setLimit(value[0] ?? 10)}
@@ -153,11 +159,26 @@ function RandomContainer() {
       <FilterBadges filtering={filtering} setFiltering={setFiltering} />
 
       {!isLoading ? (
-        <div className="mx-auto grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-          {items.map((item) => (
-            <ItemCard item={item} key={item.id} />
-          ))}
-        </div>
+        itemSize === "large" ? (
+          <div className="mx-auto grid grid-cols-1 gap-x-4 gap-y-6 xl:grid-cols-2">
+            {items.map((item) => (
+              <Link href={`/item/${item.id}`} key={item.id}>
+                <HomeLargeItem
+                  item={item}
+                  selectedCollectionsIds={debouncedSelectedCollectionsIds}
+                />
+              </Link>
+            ))}
+          </div>
+        ) : (
+          <div className="mx-auto grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+            {items.map((item) => (
+              <Link href={`/item/${item.id}`} key={item.id}>
+                <HomeMediumItem item={item} />
+              </Link>
+            ))}
+          </div>
+        )
       ) : (
         <Loading />
       )}

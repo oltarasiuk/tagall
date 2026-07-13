@@ -10,10 +10,12 @@ import { NAVBAR_LINKS } from "~/constants";
 import { CloudinaryImage } from "../../shared";
 import { api } from "../../../../trpc/react";
 
-type Props = ComponentPropsWithRef<"div">;
+type Props = ComponentPropsWithRef<"div"> & {
+  onNavigate?: () => void;
+};
 
 const NavbarContent = (props: Props) => {
-  const { className, ...restProps } = props;
+  const { className, onNavigate, ...restProps } = props;
 
   const [user] = api.user.getUser.useSuspenseQuery();
 
@@ -43,6 +45,7 @@ const NavbarContent = (props: Props) => {
                 pathname={value.href}
                 title={value.title}
                 isActive={pathname === value.href}
+                onNavigate={onNavigate}
               />
             );
           }
@@ -78,6 +81,7 @@ const NavbarContent = (props: Props) => {
           pathname={"/profile"}
           title={user.name ?? "Profile"}
           isActive={pathname === "/profile"}
+          onNavigate={onNavigate}
         />
       ) : (
         <NavbarButton

@@ -1,14 +1,8 @@
 import { Button } from "../../ui";
-import {
-  Grid2x2,
-  Grid3x3,
-  Rows3,
-  SquarePen,
-  TableProperties,
-} from "lucide-react";
+import { Grid2x2, Grid3x3 } from "lucide-react";
 import { GrainCardContainer } from "../../shared";
 
-export type ItemSize = "medium" | "list" | "small" | "large" | "edit";
+export type ItemSize = "medium" | "large";
 
 type Props = {
   itemSize: ItemSize;
@@ -23,7 +17,6 @@ const HomeItemSizeTabs = (props: Props) => {
         onClick={() => setItemSize("large")}
         size={"icon"}
         variant={itemSize === "large" ? "default" : "ghost"}
-        className="hidden sm:flex"
       >
         <Grid2x2 />
       </Button>
@@ -33,27 +26,6 @@ const HomeItemSizeTabs = (props: Props) => {
         variant={itemSize === "medium" ? "default" : "ghost"}
       >
         <Grid3x3 />
-      </Button>
-      <Button
-        onClick={() => setItemSize("small")}
-        size={"icon"}
-        variant={itemSize === "small" ? "default" : "ghost"}
-      >
-        <TableProperties className="rotate-180" />
-      </Button>
-      <Button
-        onClick={() => setItemSize("list")}
-        size={"icon"}
-        variant={itemSize === "list" ? "default" : "ghost"}
-      >
-        <Rows3 />
-      </Button>
-      <Button
-        onClick={() => setItemSize("edit")}
-        size={"icon"}
-        variant={itemSize === "edit" ? "default" : "ghost"}
-      >
-        <SquarePen />
       </Button>
     </GrainCardContainer>
   );

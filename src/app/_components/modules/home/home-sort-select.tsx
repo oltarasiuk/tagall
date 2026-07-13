@@ -19,34 +19,34 @@ const HomeSortSelect = (props: Props) => {
 
   return (
     <GrainCardContainer>
-    <Select
-      onValueChange={(value) => {
-        const selectedOption = SORT_OPTIONS.find(
-          (option) => JSON.stringify(option) === value,
-        );
-        if (selectedOption) {
-          setSorting(selectedOption);
-        }
-      }}
-    >
-      <SelectTrigger className="h-full w-28 justify-center gap-2">
-        <Paragraph>{sorting.type === "asc" ? "▼" : "▲"}</Paragraph>
-        <Paragraph className="capitalize">{sorting.name}</Paragraph>
-      </SelectTrigger>
-      <SelectContent>
-        {SORT_OPTIONS.map((option) => (
-          <SelectItem
-            key={`${option.type}-${option.name}`}
-            value={JSON.stringify(option)}
-          >
-            <div className="flex gap-2">
-              <Paragraph>{option.type === "asc" ? "▼" : "▲"}</Paragraph>
-              <Paragraph className="capitalize">{option.name}</Paragraph>
-            </div>
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
+      <Select
+        onValueChange={(value) => {
+          const selectedOption = SORT_OPTIONS.find(
+            (option) => JSON.stringify(option) === value,
+          );
+          if (selectedOption) {
+            setSorting(selectedOption);
+          }
+        }}
+      >
+        <SelectTrigger className="h-full w-28 justify-center gap-2 border-0 bg-transparent shadow-none hover:bg-accent">
+          <Paragraph>{sorting.type === "asc" ? "▼" : "▲"}</Paragraph>
+          <Paragraph className="capitalize">{sorting.name}</Paragraph>
+        </SelectTrigger>
+        <SelectContent>
+          {SORT_OPTIONS.map((option) => (
+            <SelectItem
+              key={`${option.type}-${option.name}`}
+              value={JSON.stringify(option)}
+            >
+              <div className="flex gap-2">
+                <Paragraph>{option.type === "asc" ? "▼" : "▲"}</Paragraph>
+                <Paragraph className="capitalize">{option.name}</Paragraph>
+              </div>
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     </GrainCardContainer>
   );
 };

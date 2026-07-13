@@ -9,6 +9,7 @@ type NavbarButtonProps = ComponentPropsWithoutRef<"button"> & {
   pathname: string;
   isActive: boolean;
   isLink?: boolean;
+  onNavigate?: () => void;
 };
 
 const NavbarButtonWithoutLink = (
@@ -36,7 +37,7 @@ const NavbarButtonWithoutLink = (
 };
 
 const NavbarButton = (props: NavbarButtonProps) => {
-  const { pathname, isLink = true, ...restProps } = props;
+  const { pathname, isLink = true, onNavigate, ...restProps } = props;
   if (isLink) {
     return (
       <Link
@@ -44,6 +45,7 @@ const NavbarButton = (props: NavbarButtonProps) => {
         href={{
           pathname: pathname,
         }}
+        onClick={onNavigate}
       >
         <NavbarButtonWithoutLink {...restProps} />
       </Link>
