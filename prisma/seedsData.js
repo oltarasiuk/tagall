@@ -71,7 +71,11 @@ export const seedsData = {
       name: "production",
       priority: 4,
       isFiltering: true,
-      collections: ["cm3a9sw1v000gi1s7appi2tju", "cm3bnlve100000ks784yufzt9"],
+      collections: [
+        "cm3a9sw1v000gi1s7appi2tju",
+        "cm3bnlve100000ks784yufzt9",
+        "cmi75xx8zbqwcuglg4iivite7",
+      ],
     },
     {
       id: "cm3a9sm6c0008i1s7ekkm28ed",
@@ -106,6 +110,24 @@ export const seedsData = {
       priority: 9,
       isFiltering: false,
       collections: ["cm3bnlyzw00040ks77yx39ddf"],
+    },
+    {
+      id: "cm8wmmq6yh5olde0n2gi884js",
+      name: "platforms",
+      priority: 11,
+      isFiltering: true,
+      collections: ["cmi75xx8zbqwcuglg4iivite7"],
+    },
+    {
+      id: "cmkch1wyktvs6jto5ya13elz1",
+      name: "originalLanguage",
+      priority: 12,
+      isFiltering: true,
+      collections: [
+        "cm3bnlxhu00020ks7hyps1g0a",
+        "cm3bnlyzw00040ks77yx39ddf",
+        "cmi75xx8zbqwcuglg4iivite7",
+      ],
     },
     {
       id: "cmmmqjjzijfd6npmd8qnxkrxx",

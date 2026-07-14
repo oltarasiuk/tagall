@@ -1,0 +1,41 @@
+{
+  "results": [
+    {
+      "id": "v2002",
+      "title": "Steins;Gate",
+      "alttitle": "シュタインズ・ゲート",
+      "olang": "ja",
+      "released": "2009-10-15",
+      "description": "The [i]eccentric[/i] scientist Rintarou. [spoiler]He dies.[/spoiler] See [url=https://vndb.org/v2002]here[/url].",
+      "image": {
+        "url": "https://t.vndb.org/cv/50/24350.jpg",
+        "dims": [600, 900],
+        "sexual": 0.1,
+        "violence": 0.2
+      },
+      "rating": 89,
+      "votecount": 12043,
+      "platforms": ["win", "psv", "xb360"],
+      "developers": [{ "name": "5pb." }, { "name": "Nitroplus" }],
+      "tags": [
+        { "name": "Time Travel", "rating": 2.8, "spoiler": 0 },
+        { "name": "Science Fiction", "rating": 2.6, "spoiler": 0 },
+        { "name": "Protagonist Dies", "rating": 2.2, "spoiler": 2 }
+      ]
+    },
+    {
+      "id": "v11733",
+      "title": "Explicit Cover VN",
+      "olang": "ja",
+      "released": "2015",
+      "image": {
+        "url": "https://t.vndb.org/cv/99/99999.jpg",
+        "dims": [600, 900],
+        "sexual": 1.6,
+        "violence": 0.1
+      },
+      "rating": 70,
+      "votecount": 100
+    }
+  ]
+}

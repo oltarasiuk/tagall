@@ -153,6 +153,23 @@ describe("dedupeSearchResults", () => {
     expect(merged).toHaveLength(2);
   });
 
+  it("does not merge a visual novel with a comic of the same name", () => {
+    const merged = dedupeSearchResults([
+      result("vndb", "v17", {
+        mediaKind: "visual-novel",
+        title: "Ever17",
+        authorsOrCreators: ["KID"],
+      }),
+      result("openlibrary", "OL40W", {
+        mediaKind: "comic",
+        title: "Ever17",
+        authorsOrCreators: ["KID"],
+      }),
+    ]);
+
+    expect(merged).toHaveLength(2);
+  });
+
   it("ignores an ISBN that fails its checksum", () => {
     const merged = dedupeSearchResults([
       result("openlibrary", "OL30W", {
