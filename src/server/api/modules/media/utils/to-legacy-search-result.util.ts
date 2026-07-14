@@ -39,6 +39,7 @@ export function toLegacySearchResult(
     description: result.description,
     keywords: result.keywords,
     parsedId: buildCanonicalKey(provider, result.externalId),
+    resultKey: buildCanonicalKey(provider, result.externalId),
     provider: result.provider,
     externalId: result.externalId,
     mediaKind: result.mediaKind,
@@ -49,5 +50,16 @@ export function toLegacySearchResult(
     suggestedCollectionName: collection?.name ?? null,
     rating: result.rating?.normalized10 ?? null,
     relevanceRank: result.relevanceRank,
+    creators: result.authorsOrCreators,
+    originalTitle: result.originalTitle,
+    seriesPosition: result.seriesPosition,
+    importable: result.imageCandidates.some(
+      (candidate) => candidate.canPersist,
+    ),
+    importBlockedReason: result.imageCandidates.some(
+      (candidate) => candidate.canPersist,
+    )
+      ? null
+      : "Cover required before adding",
   };
 }

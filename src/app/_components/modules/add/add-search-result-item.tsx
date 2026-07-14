@@ -64,7 +64,11 @@ const AddSearchResultItem = (props: Props) => {
           "hover:scale-105 hover:border-primary/50 hover:shadow-md",
       )}
       onClick={() => {
-        if (!disableHover && !searchResult.id)
+        if (
+          !disableHover &&
+          !searchResult.id &&
+          searchResult.importable !== false
+        )
           setSelectedItem(() => searchResult);
       }}
     >
@@ -103,7 +107,9 @@ const AddSearchResultItem = (props: Props) => {
             unoptimized
           />
         ) : (
-          <div className="h-full w-full rounded-l-lg bg-muted" />
+          <div className="flex h-full w-full items-center justify-center rounded-l-lg bg-muted p-3 text-center text-xs text-muted-foreground">
+            Cover required before adding
+          </div>
         )}
       </div>
 
@@ -126,6 +132,21 @@ const AddSearchResultItem = (props: Props) => {
             <ItemTypeBadge collectionName={typeLabel} />
           </div>
         </div>
+
+        {searchResult.originalTitle &&
+          searchResult.originalTitle !== searchResult.title && (
+            <p className="line-clamp-1 text-sm text-muted-foreground">
+              {searchResult.originalTitle}
+            </p>
+          )}
+        {searchResult.creators?.length ? (
+          <p className="line-clamp-1 text-sm text-muted-foreground">
+            {searchResult.creators.join(", ")}
+            {searchResult.seriesPosition
+              ? ` · ${searchResult.seriesPosition}`
+              : ""}
+          </p>
+        ) : null}
 
         {/* Description */}
         {searchResult.description && (
@@ -156,6 +177,11 @@ const AddSearchResultItem = (props: Props) => {
               rate={searchResult.rating}
               className="sm:text-md text-base"
             />
+          )}
+          {searchResult.importable === false && (
+            <span className="text-xs text-destructive">
+              {searchResult.importBlockedReason}
+            </span>
           )}
         </div>
       </div>

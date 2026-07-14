@@ -219,6 +219,7 @@ export async function searchVideo(
       seenImdb.add(imdbId);
       results.push({
         id: null,
+        resultKey: `imdb:${imdbId}`,
         provider: "imdb",
         externalId: imdbId,
         mediaKind: c.mediaType === "movie" ? "film" : "serie",

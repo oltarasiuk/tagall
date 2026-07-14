@@ -9,6 +9,8 @@ export type SearchResultType = {
   description: string | null;
   keywords: string[];
   parsedId: string;
+  /** Stable identity for React and optimistic updates. */
+  resultKey: string;
   /** Provider identity fields used by the server-side create flow. */
   provider: ProviderNameType;
   externalId: string;
@@ -23,4 +25,9 @@ export type SearchResultType = {
   rating?: number | null;
   /** Lower = more relevant; used when sorting items with no rating (e.g. Anilist SEARCH_MATCH order). */
   relevanceRank?: number | null;
+  creators?: string[];
+  originalTitle?: string | null;
+  seriesPosition?: string | null;
+  importable?: boolean;
+  importBlockedReason?: string | null;
 };

@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AddSearchResultItem } from "./add-search-result-item";
 import { AddItemModal } from "./add-item-modal";
 import type { SearchResultType } from "../../../../server/api/modules/parse/types";
@@ -11,6 +11,7 @@ import {
   ScrollButton,
   Search,
 } from "../../shared";
+import { Button } from "../../ui";
 import {
   useDebouncedQueryParams,
   useGetUserTags,
@@ -40,7 +41,8 @@ function AddContainer() {
   const [selectedItem, setSelectedItem] = useState<SearchResultType | null>(
     null,
   );
-  const [selectedMediaIds, setSelectedMediaIds] = useState<string[]>([]);
+  const [selectedCollectionId, setSelectedCollectionId] = useState("all");
+  const [hasSubmitted, setHasSubmitted] = useState(false);
 
   useDebouncedQueryParams<AddParamsType>({ query }, setQueryParams);
 
@@ -52,34 +54,48 @@ function AddContainer() {
 
   const { isLoading, submit: baseSubmit } = useSearchItems({
     query,
-    selectedCollectionIds: selectedMediaIds,
+    selectedCollectionId,
     setSearchResults,
     setSelectedItem,
   });
 
   const submit = () => {
+    setHasSubmitted(true);
     baseSubmit();
   };
 
-  // Tabs come from the collections themselves, so a new one (Book, Comic, ...)
-  // is filterable the moment it is seeded. Results carry the collection the
-  // provider suggested, so the filter compares ids, not display names.
-  const filteredResults =
-    selectedMediaIds.length === 0
-      ? searchResults
-      : searchResults.filter(
-          (result) =>
-            !!result.suggestedCollectionId &&
-            selectedMediaIds.includes(result.suggestedCollectionId),
-        );
+  useEffect(() => {
+    if (hasSubmitted) baseSubmit();
+    // A selected tab changes the server request, never a client-side filter.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedCollectionId]);
 
   return (
     <Container>
-      <CollectionsTabs
-        collections={collections}
-        selectedCollectionsIds={selectedMediaIds}
-        setSelectedCollectionsIds={setSelectedMediaIds}
-      />
+      <div className="w-min">
+        <Button
+          variant={selectedCollectionId === "all" ? "default" : "ghost"}
+          onClick={() => {
+            setSelectedCollectionId("all");
+          }}
+        >
+          All
+        </Button>
+        <CollectionsTabs
+          collections={collections}
+          selectedCollectionsIds={
+            selectedCollectionId === "all" ? [] : [selectedCollectionId]
+          }
+          setSelectedCollectionsIds={(value) => {
+            const current =
+              selectedCollectionId === "all" ? [] : [selectedCollectionId];
+            const ids = typeof value === "function" ? value(current) : value;
+            const next = ids[0] ?? "all";
+            setSelectedCollectionId(next);
+          }}
+          isMany={false}
+        />
+      </div>
 
       <Search
         autoFocus
@@ -104,10 +120,10 @@ function AddContainer() {
 
       {!isLoading ? (
         <div className="grid gap-6 lg:grid-cols-2">
-          {filteredResults.map((searchResult) =>
+          {searchResults.map((searchResult) =>
             searchResult.id ? (
               <Link
-                key={searchResult.parsedId}
+                key={searchResult.resultKey}
                 href={`/item/${searchResult.id}`}
               >
                 <AddSearchResultItem
@@ -117,7 +133,7 @@ function AddContainer() {
               </Link>
             ) : (
               <AddSearchResultItem
-                key={searchResult.parsedId}
+                key={searchResult.resultKey}
                 searchResult={searchResult}
                 setSelectedItem={setSelectedItem}
               />

@@ -16,6 +16,7 @@ const formSchema = z.object({
   rate: z.number().int().min(0).max(10),
   status: z.nativeEnum(ItemStatus),
   tagsIds: z.array(z.string().cuid()),
+  selectedImageUrl: z.string().url().optional().or(z.literal("")),
 });
 
 type formDataType = z.infer<typeof formSchema>;
@@ -60,7 +61,14 @@ export const useAddItemToCollection = (props: Props) => {
       return;
     }
 
-    const { commentTitle, commentDescription, rate, status, tagsIds } = data;
+    const {
+      commentTitle,
+      commentDescription,
+      rate,
+      status,
+      tagsIds,
+      selectedImageUrl,
+    } = data;
     const formData = {
       status,
       rate,
@@ -69,6 +77,7 @@ export const useAddItemToCollection = (props: Props) => {
       provider: selectedItem.provider,
       externalId: selectedItem.externalId,
       mediaKind: selectedItem.mediaKind,
+      selectedImageUrl: (selectedItem.image ?? selectedImageUrl) || undefined,
       ...((commentTitle || commentDescription) && {
         comment: {
           title: commentTitle,
@@ -80,7 +89,7 @@ export const useAddItemToCollection = (props: Props) => {
     // Optimistically mark item as added in search results
     setSearchResults((prev) =>
       prev.map((item) =>
-        item.parsedId === selectedItem.parsedId
+        item.resultKey === selectedItem.resultKey
           ? { ...item, id: "temp-id" }
           : item,
       ),
@@ -95,14 +104,14 @@ export const useAddItemToCollection = (props: Props) => {
 
         setSearchResults((prev) =>
           prev.filter(
-            (searchResult) => searchResult.parsedId !== selectedItem.parsedId,
+            (searchResult) => searchResult.resultKey !== selectedItem.resultKey,
           ),
         );
       },
       onError: () => {
         setSearchResults((prev) =>
           prev.map((item) =>
-            item.parsedId === selectedItem.parsedId
+            item.resultKey === selectedItem.resultKey
               ? { ...item, id: null }
               : item,
           ),
@@ -116,8 +125,7 @@ export const useAddItemToCollection = (props: Props) => {
     toast.promise(promise, {
       loading: `Adding ${selectedItem.title}...`,
       success: `${selectedItem.title} added successfully!`,
-      error: (error) =>
-        `Failed to add ${selectedItem.title}: ${error.message}`,
+      error: (error) => `Failed to add ${selectedItem.title}: ${error.message}`,
     });
   };
 

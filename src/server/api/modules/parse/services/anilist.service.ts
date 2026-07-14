@@ -123,7 +123,11 @@ export async function SearchAnilist(
     const description = media.description ?? null;
     const image = media.coverImage?.large ?? null;
     const parsedId = media.id.toString() ?? null;
-    const title = pickBestTitle(media.title.english, media.title.romaji, media.synonyms);
+    const title = pickBestTitle(
+      media.title.english,
+      media.title.romaji,
+      media.synonyms,
+    );
     const year = media.startDate?.year ?? null;
     const tags = media.tags?.map((tag) => tag.name) ?? [];
     const genres = media.genres ?? [];
@@ -136,6 +140,7 @@ export async function SearchAnilist(
     const averageScore = media.averageScore ?? null;
     return {
       id: null,
+      resultKey: `anilist:${parsedId}`,
       provider: "anilist",
       externalId: parsedId,
       mediaKind: "manga",

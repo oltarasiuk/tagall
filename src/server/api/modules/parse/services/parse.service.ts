@@ -59,11 +59,8 @@ export const Search = async (props: {
   const { ctx, input } = props;
   const limit = input.limit ?? 10;
 
-  const selectedCollectionIds = input.collectionIds?.length
-    ? [...new Set(input.collectionIds)]
-    : input.collectionId === "all"
-      ? []
-      : [input.collectionId];
+  const selectedCollectionIds =
+    input.collectionId === "all" ? [] : [input.collectionId];
 
   const selectedCollections = selectedCollectionIds.length
     ? await ctx.db.collection.findMany({
@@ -123,21 +120,5 @@ export const Search = async (props: {
     ),
   );
 
-  if (selectedMediaKinds.length) {
-    return items;
-  }
-
-  // "All" tab: providers are queried in parallel, so the merged list needs one
-  // deterministic order. Ratings are already normalized to 0-10 here.
-  return items.sort((a, b) => {
-    const ratingA = a.rating ?? -1;
-    const ratingB = b.rating ?? -1;
-    if (ratingB !== ratingA) return ratingB - ratingA;
-
-    const rankA = a.relevanceRank ?? 999;
-    const rankB = b.relevanceRank ?? 999;
-    if (rankA !== rankB) return rankA - rankB;
-
-    return (b.year ?? 0) - (a.year ?? 0);
-  });
+  return items;
 };

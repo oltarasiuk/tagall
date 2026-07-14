@@ -41,6 +41,8 @@ const AddItemModal = (props: Props) => {
   const status = form.watch("status");
   const rating = form.watch("rate");
   const tagsIds = form.watch("tagsIds");
+  const selectedImageUrl = form.watch("selectedImageUrl");
+  const hasCover = Boolean(selectedItem.image ?? selectedImageUrl);
 
   // no-op: card is not clickable inside the modal
   const noop: Dispatch<SetStateAction<SearchResultType | null>> = () =>
@@ -199,6 +201,31 @@ const AddItemModal = (props: Props) => {
                 )}
 
                 {/* Comment title */}
+                {!selectedItem.image && (
+                  <FormField
+                    control={form.control}
+                    name="selectedImageUrl"
+                    render={() => (
+                      <FormItem>
+                        <FormLabel>Cover URL</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="url"
+                            placeholder="https://…"
+                            value={selectedImageUrl ?? ""}
+                            onChange={(event) =>
+                              form.setValue(
+                                "selectedImageUrl",
+                                event.target.value,
+                              )
+                            }
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
                 <FormField
                   control={form.control}
                   name="commentTitle"
@@ -255,7 +282,7 @@ const AddItemModal = (props: Props) => {
 
                 <Button
                   className="w-full"
-                  disabled={form.formState.isSubmitting}
+                  disabled={form.formState.isSubmitting || !hasCover}
                   type="submit"
                 >
                   Add to collection
