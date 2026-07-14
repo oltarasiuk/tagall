@@ -1,0 +1,30 @@
+{
+  "data": {
+    "search": {
+      "results": {
+        "found": 1,
+        "hits": [
+          {
+            "document": {
+              "id": "12345",
+              "slug": "dune",
+              "title": "Dune",
+              "author_names": ["Frank Herbert"],
+              "description": "Set on the desert planet Arrakis.",
+              "release_year": 1965,
+              "rating": 4.24,
+              "ratings_count": 812,
+              "genres": ["Science Fiction", "Fantasy"],
+              "moods": ["adventurous"],
+              "tags": ["space", "politics"],
+              "isbns": ["9780441013593", "0441013597"],
+              "series_names": ["Dune"],
+              "compilation": false,
+              "image": { "url": "https://assets.hardcover.app/covers/dune.jpg" }
+            }
+          }
+        ]
+      }
+    }
+  }
+}

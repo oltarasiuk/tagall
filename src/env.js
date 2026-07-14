@@ -54,6 +54,9 @@ export const env = createEnv({
     /** Sent as the Open Library User-Agent: identified clients get 3 rps instead of 1. */
     OPEN_LIBRARY_CONTACT_EMAIL: z.string().email().optional(),
 
+    /** Includes the "Bearer " prefix already: Hardcover hands the token out that way. */
+    HARDCOVER_API_TOKEN: z.string().optional(),
+
     ALLOWED_EMAILS: z.string(),
     SECRET_CLIENT_COOKIE_VAR: z.string(),
   },
@@ -92,6 +95,7 @@ export const env = createEnv({
     TMDB_API_KEY: process.env.TMDB_API_KEY,
     IMDB_ENRICH_ENABLED: process.env.IMDB_ENRICH_ENABLED,
     OPEN_LIBRARY_CONTACT_EMAIL: process.env.OPEN_LIBRARY_CONTACT_EMAIL,
+    HARDCOVER_API_TOKEN: process.env.HARDCOVER_API_TOKEN,
     ALLOWED_EMAILS: process.env.ALLOWED_EMAILS,
     NEXT_PUBLIC_CLOUDINARY_FOLDER: process.env.NEXT_PUBLIC_CLOUDINARY_FOLDER,
     SECRET_CLIENT_COOKIE_VAR: process.env.SECRET_CLIENT_COOKIE_VAR,

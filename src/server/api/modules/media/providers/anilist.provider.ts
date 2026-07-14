@@ -57,6 +57,7 @@ export const anilistProvider: MediaProviderAdapterType = {
       authorsOrCreators: [],
       seriesName: null,
       seriesPosition: null,
+      isbns: [],
       identifiers: [
         {
           provider: "anilist",

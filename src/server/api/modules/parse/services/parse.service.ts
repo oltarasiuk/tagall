@@ -3,6 +3,7 @@ import {
   getCollectionSlugForMediaKind,
   getMediaKindForCollectionSlug,
 } from "../../media/constants/media-kind.const";
+import { dedupeSearchResults } from "../../media/services/search-deduplication.service";
 import { searchMedia } from "../../media/services/media-search.service";
 import {
   toLegacySearchResult,
@@ -83,6 +84,10 @@ export const Search = async (props: {
     ...(mediaKind && { mediaKind }),
   });
 
+  // One work described by two providers must reach the UI as one card: hiding
+  // the duplicate in React would still let the add flow create two items.
+  const merged = dedupeSearchResults(results);
+
   const collections = await ctx.db.collection.findMany({
     select: { id: true, name: true, slug: true },
   });
@@ -90,7 +95,7 @@ export const Search = async (props: {
     collections.map((collection) => [collection.slug, collection]),
   );
 
-  const items = results.map((result) =>
+  const items = merged.map((result) =>
     toLegacySearchResult(
       result,
       collectionBySlug.get(getCollectionSlugForMediaKind(result.mediaKind)) ??

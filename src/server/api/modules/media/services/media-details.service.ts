@@ -1,6 +1,7 @@
 import { MediaError } from "../errors/media.error";
 import { providerRegistry, type ProviderRegistryType } from "../providers";
 import type { NormalizedItemDetailsType, ProviderNameType } from "../types";
+import { enrichBookDetails } from "./book-enrichment.service";
 
 /**
  * Details are always re-fetched server-side from provider + external id. The
@@ -31,5 +32,9 @@ export async function getMediaDetails(props: {
     );
   }
 
-  return adapter.getDetails(externalId);
+  const details = await adapter.getDetails(externalId);
+
+  // Books are described by two providers; the second one is looked up here so
+  // the item is stored with both identities and the fuller metadata.
+  return enrichBookDetails({ provider, details, registry });
 }

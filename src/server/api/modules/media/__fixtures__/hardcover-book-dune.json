@@ -1,0 +1,25 @@
+{
+  "data": {
+    "books": [
+      {
+        "id": 12345,
+        "slug": "dune",
+        "title": "Dune",
+        "subtitle": null,
+        "description": "Set on the desert planet Arrakis.",
+        "release_year": 1965,
+        "rating": 4.24,
+        "ratings_count": 812,
+        "compilation": false,
+        "image": { "url": "https://assets.hardcover.app/covers/dune.jpg" },
+        "contributions": [{ "author": { "name": "Frank Herbert" } }],
+        "book_series": [{ "position": 1, "series": { "name": "Dune" } }],
+        "cached_tags": {
+          "Genre": [{ "tag": "Science Fiction" }, { "tag": "Fantasy" }],
+          "Mood": [{ "tag": "adventurous" }],
+          "Tag": [{ "tag": "space" }, { "tag": "politics" }]
+        }
+      }
+    ]
+  }
+}

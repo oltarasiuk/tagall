@@ -81,6 +81,7 @@ export const tmdbProvider: MediaProviderAdapterType = {
           seriesName: null,
           seriesPosition: null,
           identifiers,
+          isbns: [],
           imageCandidates: toImageCandidates(result.image),
           rating: normalizeRating({
             source: "tmdb",

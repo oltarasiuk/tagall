@@ -98,5 +98,12 @@ export const seedsData = {
       isFiltering: false,
       collections: ["cm3bnlyzw00040ks77yx39ddf"],
     },
+    {
+      id: "cmmmqjjzijfd6npmd8qnxkrxx",
+      name: "series",
+      priority: 10,
+      isFiltering: true,
+      collections: ["cm3bnlxhu00020ks7hyps1g0a"],
+    },
   ],
 };

@@ -52,6 +52,12 @@ export type ProviderSearchResultType = {
   seriesName: string | null;
   seriesPosition: string | null;
   identifiers: ExternalIdentifierValueType[];
+  /**
+   * Editions of a work, kept only to match it across providers: two book
+   * sources agree on ISBNs long before they agree on titles. Not persisted —
+   * an ISBN names an edition, and an item is a work.
+   */
+  isbns: string[];
   imageCandidates: ImageCandidateType[];
   rating: NormalizedRatingType | null;
   genres: string[];

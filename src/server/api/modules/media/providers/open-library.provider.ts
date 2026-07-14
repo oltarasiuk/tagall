@@ -193,6 +193,7 @@ const toSearchResult = (
     seriesName: null,
     seriesPosition: null,
     identifiers: toIdentifiers(workId),
+    isbns: doc.isbn ?? [],
     imageCandidates: toImageCandidates(doc.cover_i),
     rating: toRating(doc),
     genres,

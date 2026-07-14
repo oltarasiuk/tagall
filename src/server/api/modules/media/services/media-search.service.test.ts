@@ -27,6 +27,7 @@ function makeResult(
     seriesName: null,
     seriesPosition: null,
     identifiers: [{ provider, externalId }],
+    isbns: [],
     imageCandidates: [],
     rating: null,
     genres: [],
