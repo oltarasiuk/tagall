@@ -15,6 +15,23 @@ enum Role {
     ADMIN
 }
 
+enum ExternalProvider {
+    IMDB
+    TMDB
+    ANILIST
+    OPEN_LIBRARY
+    HARDCOVER
+    GOOGLE_BOOKS
+    IGDB
+    RAWG
+    STEAM
+    BGG
+    VNDB
+    FANART_TV
+    STEAMGRIDDB
+    MANGADEX
+}
+
 enum ItemStatus {
     COMPLETED
     INPROGRESS
@@ -104,22 +121,44 @@ model Item {
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
 
-    parsedId       String @unique
-    title          String
-    image          String?
-    year           Int?
-    description    String?
-    externalRating Float?
-    embedding      Unsupported("vector(1536)")?
+    // Canonical key: "<provider>:<exact external id>", e.g. "imdb:tt0137523".
+    // The provider prefix is lower-case; the external id keeps its original case.
+    parsedId         String  @unique
+    title            String
+    originalTitle    String?
+    originalLanguage String?
+    image            String?
+    year             Int?
+    description      String?
+    sourceUrl        String?
+    externalRating   Float?
+    embedding        Unsupported("vector(1536)")?
 
-    fields       Field[]
-    collection   Collection   @relation(fields: [collectionId], references: [id])
-    collectionId String
-    userToItems  UserToItem[]
+    fields              Field[]
+    collection          Collection               @relation(fields: [collectionId], references: [id])
+    collectionId        String
+    userToItems         UserToItem[]
+    externalIdentifiers ItemExternalIdentifier[]
 
     @@index([updatedAt, createdAt])
     @@index([year, title])
     @@index([collectionId])
+}
+
+model ItemExternalIdentifier {
+    id        String   @id @default(cuid())
+    createdAt DateTime @default(now())
+
+    provider   ExternalProvider
+    externalId String
+    url        String?
+    isPrimary  Boolean          @default(false)
+
+    item   Item   @relation(fields: [itemId], references: [id], onDelete: Cascade)
+    itemId String
+
+    @@unique([provider, externalId])
+    @@index([itemId])
 }
 
 model ItemComment {
