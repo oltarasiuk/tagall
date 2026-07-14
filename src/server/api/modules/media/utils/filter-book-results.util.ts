@@ -1,4 +1,4 @@
-import type { MediaKindType, ProviderSearchResultType } from "../types";
+import type { MediaKindType } from "../types";
 import { isLikelySingleIssue } from "./classify-book-kind.util";
 import { normalizeTitle } from "./normalize-title.util";
 
@@ -12,10 +12,12 @@ import { normalizeTitle } from "./normalize-title.util";
  * Single issues are dropped everywhere: the collections are the items.
  */
 export function isWantedBookResult(
-  result: Pick<
-    ProviderSearchResultType,
-    "mediaKind" | "title" | "originalTitle" | "alternateTitles"
-  >,
+  result: {
+    mediaKind: MediaKindType;
+    title: string;
+    originalTitle?: string | null;
+    alternateTitles?: string[];
+  },
   requestedKind: MediaKindType | undefined,
 ): boolean {
   if (isLikelySingleIssue(result.title)) {
@@ -40,10 +42,11 @@ export function isWantedBookResult(
  * description occurrence.
  */
 export function matchesBookTitle(
-  result: Pick<
-    ProviderSearchResultType,
-    "title" | "originalTitle" | "alternateTitles"
-  >,
+  result: {
+    title: string;
+    originalTitle?: string | null;
+    alternateTitles?: string[];
+  },
   query: string,
 ): boolean {
   const normalizedQuery = normalizeTitle(query);

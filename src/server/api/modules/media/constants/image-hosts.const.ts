@@ -14,6 +14,7 @@ export const ALLOWED_IMAGE_HOSTS: readonly string[] = [
   "cdn.steamgriddb.com",
   "media.rawg.io",
   "cf.geekdo-images.com",
+  "cf.geekdo-static.com",
   "t.vndb.org",
   "s2.vndb.org",
   "assets.fanart.tv",

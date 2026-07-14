@@ -40,6 +40,12 @@ const parseDirectReference = (
     return { provider: "hardcover", externalId: hardcover[1]! };
   const vndb = /(?:vndb:|vndb\.org\/)(v\d+)\/?$/i.exec(input);
   if (vndb) return { provider: "vndb", externalId: vndb[1]! };
+  const igdb = /(?:igdb:|igdb\.com\/games\/)(\d+)\/?$/i.exec(input);
+  if (igdb) return { provider: "igdb", externalId: igdb[1]! };
+  const bgg = /(?:bgg:|boardgamegeek\.com\/boardgame\/)(\d+)\/?$/i.exec(input);
+  if (bgg) return { provider: "bgg", externalId: bgg[1]! };
+  const rawg = /(?:rawg:|rawg\.io\/games\/)([a-z0-9-]+)\/?$/i.exec(input);
+  if (rawg) return { provider: "rawg", externalId: rawg[1]! };
   return null;
 };
 

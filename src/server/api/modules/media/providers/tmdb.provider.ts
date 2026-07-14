@@ -14,6 +14,7 @@ import type {
   ProviderSearchResultType,
 } from "../types";
 import { normalizeRating } from "../utils/normalize-rating.util";
+import { getFanartPosters } from "./fanart-image.provider";
 
 /**
  * Films and series: metadata comes from TMDB, but the identity is the IMDb id.
@@ -126,8 +127,10 @@ export const tmdbProvider: MediaProviderAdapterType = {
       });
     }
 
+    const mediaKind = found?.mediaType === "tv" ? "serie" : "film";
+    const fanart = found ? await getFanartPosters(found.tmdbId, mediaKind) : [];
     return {
-      mediaKind: found?.mediaType === "tv" ? "serie" : "film",
+      mediaKind,
       title: details.title,
       originalTitle: null,
       originalLanguage: null,
@@ -135,7 +138,7 @@ export const tmdbProvider: MediaProviderAdapterType = {
       description: details.description,
       sourceUrl: `${IMDB_TITLE_URL}/${externalId}`,
       identifiers,
-      imageCandidates: toImageCandidates(details.image),
+      imageCandidates: [...fanart, ...toImageCandidates(details.image)],
       rating: normalizeRating({
         source: "tmdb",
         value: details.rating,

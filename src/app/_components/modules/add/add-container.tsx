@@ -43,6 +43,7 @@ function AddContainer() {
   );
   const [selectedCollectionId, setSelectedCollectionId] = useState("all");
   const [hasSubmitted, setHasSubmitted] = useState(false);
+  const [limit, setLimit] = useState(10);
 
   useDebouncedQueryParams<AddParamsType>({ query }, setQueryParams);
 
@@ -55,32 +56,25 @@ function AddContainer() {
   const { isLoading, submit: baseSubmit } = useSearchItems({
     query,
     selectedCollectionId,
+    limit,
     setSearchResults,
     setSelectedItem,
   });
 
   const submit = () => {
+    setLimit(10);
     setHasSubmitted(true);
-    baseSubmit();
   };
 
   useEffect(() => {
     if (hasSubmitted) baseSubmit();
     // A selected tab changes the server request, never a client-side filter.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedCollectionId]);
+  }, [selectedCollectionId, limit]);
 
   return (
     <Container>
       <div className="w-min">
-        <Button
-          variant={selectedCollectionId === "all" ? "default" : "ghost"}
-          onClick={() => {
-            setSelectedCollectionId("all");
-          }}
-        >
-          All
-        </Button>
         <CollectionsTabs
           collections={collections}
           selectedCollectionsIds={
@@ -119,8 +113,9 @@ function AddContainer() {
       )}
 
       {!isLoading ? (
-        <div className="grid gap-6 lg:grid-cols-2">
-          {searchResults.map((searchResult) =>
+        <>
+          <div className="grid gap-6 lg:grid-cols-2">
+            {searchResults.map((searchResult) =>
             searchResult.id ? (
               <Link
                 key={searchResult.resultKey}
@@ -138,8 +133,20 @@ function AddContainer() {
                 setSelectedItem={setSelectedItem}
               />
             ),
+            )}
+          </div>
+          {hasSubmitted && searchResults.length >= limit && (
+            <div className="mt-6 flex justify-center">
+              <Button
+                variant="secondary"
+                onClick={() => setLimit((current) => Math.min(current + 10, 30))}
+                disabled={limit >= 30}
+              >
+                Load more
+              </Button>
+            </div>
           )}
-        </div>
+        </>
       ) : (
         <Loading />
       )}

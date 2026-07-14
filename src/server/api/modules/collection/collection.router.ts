@@ -9,12 +9,10 @@ import { getFirstAllowedUser } from "../../helpers";
 
 export const CollectionRouter = createTRPCRouter({
   getAll: protectedProcedure.query(async (props) => {
-    const response = await getOrSetCache(
-      () => GetAll(props),
-      "collection",
-      "getAll",
-    );
-    return response;
+    // This is a tiny, deployment-managed lookup table. Caching it for a day
+    // hid newly migrated collections (Book, Comic, Game, Board Game) until
+    // Redis expired, while a direct indexed query is negligible.
+    return GetAll(props);
   }),
   getUserCollections: protectedProcedure.query(async (props) => {
     const { ctx } = props;

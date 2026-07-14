@@ -57,6 +57,15 @@ export const env = createEnv({
     /** Includes the "Bearer " prefix already: Hardcover hands the token out that way. */
     HARDCOVER_API_TOKEN: z.string().optional(),
 
+    IGDB_CLIENT_ID: z.string().optional(),
+    IGDB_CLIENT_SECRET: z.string().optional(),
+    RAWG_API_KEY: z.string().optional(),
+    STEAMGRIDDB_API_KEY: z.string().optional(),
+    FANART_TV_PERSONAL_API_KEY: z.string().optional(),
+    FANART_TV_PROJECT_API_KEY: z.string().optional(),
+    /** BGG remains disabled until the application token is approved. */
+    BGG_API_TOKEN: z.string().optional(),
+
     ALLOWED_EMAILS: z.string(),
     SECRET_CLIENT_COOKIE_VAR: z.string(),
   },
@@ -96,6 +105,13 @@ export const env = createEnv({
     IMDB_ENRICH_ENABLED: process.env.IMDB_ENRICH_ENABLED,
     OPEN_LIBRARY_CONTACT_EMAIL: process.env.OPEN_LIBRARY_CONTACT_EMAIL,
     HARDCOVER_API_TOKEN: process.env.HARDCOVER_API_TOKEN,
+    IGDB_CLIENT_ID: process.env.IGDB_CLIENT_ID,
+    IGDB_CLIENT_SECRET: process.env.IGDB_CLIENT_SECRET,
+    RAWG_API_KEY: process.env.RAWG_API_KEY,
+    STEAMGRIDDB_API_KEY: process.env.STEAMGRIDDB_API_KEY,
+    FANART_TV_PERSONAL_API_KEY: process.env.FANART_TV_PERSONAL_API_KEY,
+    FANART_TV_PROJECT_API_KEY: process.env.FANART_TV_PROJECT_API_KEY,
+    BGG_API_TOKEN: process.env.BGG_API_TOKEN,
     ALLOWED_EMAILS: process.env.ALLOWED_EMAILS,
     NEXT_PUBLIC_CLOUDINARY_FOLDER: process.env.NEXT_PUBLIC_CLOUDINARY_FOLDER,
     SECRET_CLIENT_COOKIE_VAR: process.env.SECRET_CLIENT_COOKIE_VAR,

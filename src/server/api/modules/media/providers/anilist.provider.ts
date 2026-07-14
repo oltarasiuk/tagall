@@ -11,6 +11,7 @@ import type {
   ProviderSearchResultType,
 } from "../types";
 import { normalizeRating } from "../utils/normalize-rating.util";
+import { getMangaDexCover } from "./mangadex-image.provider";
 
 const ANILIST_MANGA_URL = "https://anilist.co/manga";
 
@@ -85,6 +86,7 @@ export const anilistProvider: MediaProviderAdapterType = {
       );
     }
 
+    const mangaDexCover = await getMangaDexCover(details.title);
     return {
       mediaKind: "manga",
       title: details.title,
@@ -100,7 +102,7 @@ export const anilistProvider: MediaProviderAdapterType = {
           url: `${ANILIST_MANGA_URL}/${externalId}`,
         },
       ],
-      imageCandidates: toImageCandidates(details.image),
+      imageCandidates: [...mangaDexCover, ...toImageCandidates(details.image)],
       rating: toRating(details.rating),
       fields: {
         genres: details.genres,

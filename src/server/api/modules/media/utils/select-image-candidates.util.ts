@@ -9,6 +9,7 @@ const PROVIDER_PRIORITY: Partial<Record<MediaKindType, ProviderNameType[]>> = {
   manga: ["mangadex", "anilist"],
   book: ["openlibrary", "hardcover"],
   comic: ["openlibrary", "hardcover"],
+  "board-game": ["bgg"],
 };
 
 export const MAX_IMAGE_ATTEMPTS = 3;
