@@ -98,6 +98,9 @@ dependencies:
   axios:
     specifier: ^1.7.7
     version: 1.13.5
+  bottleneck:
+    specifier: ^2.19.5
+    version: 2.19.5
   cheerio:
     specifier: ^1.0.0
     version: 1.2.0
@@ -3354,6 +3357,10 @@ packages:
 
   /boolbase@1.0.0:
     resolution: {integrity: sha512-JZOSA7Mo9sNGB8+UjSgzdLtokWAky1zbztM3WRLCbZ70/3cTANmQmOdR7y2g+J0e2WXywy1yS468tY+IruqEww==}
+    dev: false
+
+  /bottleneck@2.19.5:
+    resolution: {integrity: sha512-VHiNCbI1lKdl44tGrhNfU3lup0Tj/ZBMJB5/2ZbNXRCPuRCO7ed2mgcK4r17y+KB2EfuYuRaVlwNbAeaWGSpbw==}
     dev: false
 
   /brace-expansion@1.1.12:

@@ -1,4 +1,5 @@
-import { ExternalProvider } from "@prisma/client";
+import type { ExternalProvider } from "@prisma/client";
+import { PROVIDER_PREFIXES, toProviderEnum } from "../types/provider.type";
 
 /**
  * Canonical key stored in `Item.parsedId`: "<provider>:<external id>".
@@ -7,30 +8,6 @@ import { ExternalProvider } from "@prisma/client";
  * (only trimmed). Never run it through `normalizeText()` — providers such as
  * Open Library ("OL82563W") and Google Books use case-sensitive ids.
  */
-
-export const PROVIDER_PREFIXES: Record<ExternalProvider, string> = {
-  [ExternalProvider.IMDB]: "imdb",
-  [ExternalProvider.TMDB]: "tmdb",
-  [ExternalProvider.ANILIST]: "anilist",
-  [ExternalProvider.OPEN_LIBRARY]: "openlibrary",
-  [ExternalProvider.HARDCOVER]: "hardcover",
-  [ExternalProvider.GOOGLE_BOOKS]: "google-books",
-  [ExternalProvider.IGDB]: "igdb",
-  [ExternalProvider.RAWG]: "rawg",
-  [ExternalProvider.STEAM]: "steam",
-  [ExternalProvider.BGG]: "bgg",
-  [ExternalProvider.VNDB]: "vndb",
-  [ExternalProvider.FANART_TV]: "fanart-tv",
-  [ExternalProvider.STEAMGRIDDB]: "steamgriddb",
-  [ExternalProvider.MANGADEX]: "mangadex",
-};
-
-const PROVIDER_BY_PREFIX = new Map<string, ExternalProvider>(
-  Object.entries(PROVIDER_PREFIXES).map(([provider, prefix]) => [
-    prefix,
-    provider as ExternalProvider,
-  ]),
-);
 
 export type CanonicalKeyPartsType = {
   provider: ExternalProvider;
@@ -57,7 +34,7 @@ export function parseCanonicalKey(key: string): CanonicalKeyPartsType | null {
     return null;
   }
 
-  const provider = PROVIDER_BY_PREFIX.get(key.slice(0, separatorIndex));
+  const provider = toProviderEnum(key.slice(0, separatorIndex));
   const externalId = key.slice(separatorIndex + 1).trim();
 
   if (!provider || !externalId) {
