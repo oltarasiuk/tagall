@@ -59,30 +59,50 @@ export const Search = async (props: {
   const { ctx, input } = props;
   const limit = input.limit ?? 10;
 
-  let mediaKind: ReturnType<typeof getMediaKindForCollectionSlug> = null;
+  const selectedCollectionIds = input.collectionIds?.length
+    ? [...new Set(input.collectionIds)]
+    : input.collectionId === "all"
+      ? []
+      : [input.collectionId];
 
-  if (input.collectionId !== "all") {
-    const collection = await ctx.db.collection.findUnique({
-      where: { id: input.collectionId },
-      select: { slug: true },
-    });
+  const selectedCollections = selectedCollectionIds.length
+    ? await ctx.db.collection.findMany({
+        where: { id: { in: selectedCollectionIds } },
+        select: { id: true, slug: true },
+      })
+    : [];
 
-    if (!collection) {
-      throw new Error("Collection not found");
-    }
-
-    mediaKind = getMediaKindForCollectionSlug(collection.slug);
-
-    if (!mediaKind) {
-      throw new Error(`No search provider for collection "${collection.slug}"`);
-    }
+  if (selectedCollections.length !== selectedCollectionIds.length) {
+    throw new Error("Collection not found");
   }
 
-  const { results } = await searchMedia({
-    query: input.query,
-    limit,
-    ...(mediaKind && { mediaKind }),
-  });
+  const selectedMediaKinds = [
+    ...new Set(
+      selectedCollections.map((collection) => {
+        const mediaKind = getMediaKindForCollectionSlug(collection.slug);
+
+        if (!mediaKind) {
+          throw new Error(
+            `No search provider for collection "${collection.slug}"`,
+          );
+        }
+
+        return mediaKind;
+      }),
+    ),
+  ];
+
+  // No selected type deliberately means an all-provider search. Otherwise we
+  // only call adapters that serve the selected media kinds; this saves latency
+  // and avoids spending provider rate limits on irrelevant requests.
+  const searchOutputs = selectedMediaKinds.length
+    ? await Promise.all(
+        selectedMediaKinds.map((mediaKind) =>
+          searchMedia({ query: input.query, limit, mediaKind }),
+        ),
+      )
+    : [await searchMedia({ query: input.query, limit })];
+  const results = searchOutputs.flatMap((output) => output.results);
 
   // One work described by two providers must reach the UI as one card: hiding
   // the duplicate in React would still let the add flow create two items.
@@ -103,7 +123,7 @@ export const Search = async (props: {
     ),
   );
 
-  if (mediaKind) {
+  if (selectedMediaKinds.length) {
     return items;
   }
 

@@ -4,7 +4,13 @@ import { AddSearchResultItem } from "./add-search-result-item";
 import { AddItemModal } from "./add-item-modal";
 import type { SearchResultType } from "../../../../server/api/modules/parse/types";
 import Link from "next/link";
-import { CollectionsTabs, Container, Loading, ScrollButton, Search } from "../../shared";
+import {
+  CollectionsTabs,
+  Container,
+  Loading,
+  ScrollButton,
+  Search,
+} from "../../shared";
 import {
   useDebouncedQueryParams,
   useGetUserTags,
@@ -20,8 +26,6 @@ export const AddParamsSchema = SearchInputSchema.pick({
 });
 
 export type AddParamsType = z.infer<typeof AddParamsSchema>;
-
-const SEARCH_ALL_COLLECTION_ID = "all" as const;
 
 function AddContainer() {
   const [collections] = api.collection.getAll.useSuspenseQuery();
@@ -48,33 +52,35 @@ function AddContainer() {
 
   const { isLoading, submit: baseSubmit } = useSearchItems({
     query,
-    selectedCollectionId: SEARCH_ALL_COLLECTION_ID,
+    selectedCollectionIds: selectedMediaIds,
     setSearchResults,
     setSelectedItem,
   });
 
   const submit = () => {
-    setSelectedMediaIds([]);
     baseSubmit();
   };
 
   // Tabs come from the collections themselves, so a new one (Book, Comic, ...)
   // is filterable the moment it is seeded. Results carry the collection the
   // provider suggested, so the filter compares ids, not display names.
-  const filteredResults = [
-    ...(selectedMediaIds.length === 0
+  const filteredResults =
+    selectedMediaIds.length === 0
       ? searchResults
       : searchResults.filter(
-          (result) => result.suggestedCollectionId === selectedMediaIds[0],
-        )),
-  ]
-    .filter((r) => !!r.image)
-    .sort((a, b) => (b.rating ?? -1) - (a.rating ?? -1));
-
-  const hasResults = searchResults.length > 0;
+          (result) =>
+            !!result.suggestedCollectionId &&
+            selectedMediaIds.includes(result.suggestedCollectionId),
+        );
 
   return (
     <Container>
+      <CollectionsTabs
+        collections={collections}
+        selectedCollectionsIds={selectedMediaIds}
+        setSelectedCollectionsIds={setSelectedMediaIds}
+      />
+
       <Search
         autoFocus
         isLoading={isLoading}
@@ -82,15 +88,6 @@ function AddContainer() {
         setQuery={setQuery}
         submit={submit}
       />
-
-      {hasResults && !isLoading && (
-        <CollectionsTabs
-          collections={collections}
-          selectedCollectionsIds={selectedMediaIds}
-          setSelectedCollectionsIds={setSelectedMediaIds}
-          isMany={false}
-        />
-      )}
 
       {selectedItem && (
         <AddItemModal

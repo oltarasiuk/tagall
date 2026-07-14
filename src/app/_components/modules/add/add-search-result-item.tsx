@@ -50,17 +50,22 @@ const AddSearchResultItem = (props: Props) => {
   const { searchResult, setSelectedItem, disableHover = false } = props;
   const typeLabel = getTypeLabel(searchResult);
   const isManga = typeLabel === "Manga";
-  const meta = parseKeywords(searchResult.keywords, isManga);
+  // Book providers may return dozens of subjects. Search cards are compact,
+  // so show only a small, bounded preview instead of letting labels overflow.
+  const meta = parseKeywords(searchResult.keywords, isManga).slice(0, 2);
 
   return (
     <CardContainer
       className={cn(
         "relative overflow-hidden p-0 transition-all duration-300",
         !disableHover && "cursor-pointer",
-        !disableHover && !searchResult.id && "hover:scale-105 hover:border-primary/50 hover:shadow-md",
+        !disableHover &&
+          !searchResult.id &&
+          "hover:scale-105 hover:border-primary/50 hover:shadow-md",
       )}
       onClick={() => {
-        if (!disableHover && !searchResult.id) setSelectedItem(() => searchResult);
+        if (!disableHover && !searchResult.id)
+          setSelectedItem(() => searchResult);
       }}
     >
       {/* Blurred background image */}
@@ -80,7 +85,10 @@ const AddSearchResultItem = (props: Props) => {
       {/* Grain overlay */}
       <div
         className="pointer-events-none absolute inset-0 z-[1] opacity-[0.035]"
-        style={{ backgroundImage: "url('/halftone.png')", backgroundRepeat: "repeat" }}
+        style={{
+          backgroundImage: "url('/halftone.png')",
+          backgroundRepeat: "repeat",
+        }}
       />
 
       {/* Poster */}
@@ -101,7 +109,6 @@ const AddSearchResultItem = (props: Props) => {
 
       {/* Content */}
       <div className="relative z-10 flex min-w-0 flex-1 flex-col justify-between gap-2 px-4 py-3">
-
         {/* Title + badges row */}
         <div className="flex items-start justify-between gap-2">
           <p className="line-clamp-2 text-base font-bold leading-snug sm:text-lg">
@@ -120,34 +127,37 @@ const AddSearchResultItem = (props: Props) => {
           </div>
         </div>
 
-            {/* Description */}
-            {searchResult.description && (
+        {/* Description */}
+        {searchResult.description && (
           <p className="line-clamp-3 text-sm leading-relaxed text-muted-foreground">
             {searchResult.description}
           </p>
         )}
 
         {/* Rating + year row */}
-        <div className="flex items-center justify-end gap-3">
-        {meta.map((meta: string) => (
-          <p key={meta} className="text-base text-muted-foreground sm:text-md">
-            {meta}
-          </p>
-        ))}
-     
+        <div className="flex min-w-0 items-center justify-end gap-3">
+          {meta.map((meta: string) => (
+            <p
+              key={meta}
+              className="sm:text-md max-w-24 truncate text-base text-muted-foreground"
+              title={meta}
+            >
+              {meta}
+            </p>
+          ))}
+
           {searchResult.year != null && (
-            <span className="text-base font-semibold text-muted-foreground sm:text-md ">
+            <span className="sm:text-md text-base font-semibold text-muted-foreground">
               {searchResult.year}
             </span>
           )}
-              {searchResult.rating != null && (
-            <ItemRatingBadge rate={searchResult.rating} className="text-base sm:text-md" />
+          {searchResult.rating != null && (
+            <ItemRatingBadge
+              rate={searchResult.rating}
+              className="sm:text-md text-base"
+            />
           )}
         </div>
-
-        
-
-    
       </div>
     </CardContainer>
   );

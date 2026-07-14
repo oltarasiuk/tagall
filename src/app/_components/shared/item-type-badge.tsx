@@ -6,6 +6,7 @@ const TYPE_BADGE_STYLES: Record<string, string> = {
   Serie: "bg-purple-500/15 text-purple-400 border-purple-500/30",
   Manga: "bg-orange-500/15 text-orange-400 border-orange-500/30",
   Book: "bg-red-500/15 text-red-400 border-red-500/30",
+  Comic: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30",
 };
 
 type Props = {
@@ -18,10 +19,7 @@ const ItemTypeBadge = ({ collectionName, className }: Props) => {
   if (!style) return null;
 
   return (
-    <Badge
-      variant="collection"
-      className={cn(style, className)}
-    >
+    <Badge variant="collection" className={cn(style, className)}>
       {collectionName}
     </Badge>
   );

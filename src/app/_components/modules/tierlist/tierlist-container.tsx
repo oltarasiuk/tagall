@@ -6,10 +6,10 @@ import type {
   GetUserItemsSortType,
   TierItemType,
 } from "../../../../server/api/modules/item/types";
-import { 
-  DndContext, 
-  DragOverlay, 
-  type DragEndEvent, 
+import {
+  DndContext,
+  DragOverlay,
+  type DragEndEvent,
   type DragStartEvent,
   MouseSensor,
   TouchSensor,
@@ -174,7 +174,7 @@ function TierListContainer() {
           />
         );
       }),
-    [tierItemsMap, itemView]
+    [tierItemsMap, itemView],
   );
 
   const handleDragStart = (event: DragStartEvent) => {
@@ -186,9 +186,9 @@ function TierListContainer() {
 
   const handleDragEnd = (event: DragEndEvent) => {
     setActiveItem(null);
-    
+
     const { active, over } = event;
-    
+
     if (!over) return;
 
     const itemId = active.id as string;
@@ -216,17 +216,17 @@ function TierListContainer() {
     // Optimistic update: move item between tiers
     setTierItemsMap((prevMap) => {
       const newMap = new Map(prevMap);
-      
+
       // Remove from old tier
       const oldTierItems = newMap.get(oldRate) ?? [];
       const filteredOldTier = oldTierItems.filter((i) => i.id !== itemId);
       newMap.set(oldRate, filteredOldTier);
-      
+
       // Add to new tier
       const newTierItems = newMap.get(newRate) ?? [];
       const updatedItem = { ...item, rate: newRate };
       newMap.set(newRate, [...newTierItems, updatedItem]);
-      
+
       return newMap;
     });
 
@@ -246,16 +246,16 @@ function TierListContainer() {
           // Rollback on error
           setTierItemsMap((prevMap) => {
             const newMap = new Map(prevMap);
-            
+
             // Remove from new tier
             const newTierItems = newMap.get(newRate) ?? [];
             const filteredNewTier = newTierItems.filter((i) => i.id !== itemId);
             newMap.set(newRate, filteredNewTier);
-            
+
             // Add back to old tier
             const oldTierItems = newMap.get(oldRate) ?? [];
             newMap.set(oldRate, [...oldTierItems, item]);
-            
+
             return newMap;
           });
         },
@@ -318,15 +318,13 @@ function TierListContainer() {
           <Loading />
         </div>
       ) : (
-        <DndContext 
+        <DndContext
           sensors={sensors}
-          onDragStart={handleDragStart} 
+          onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
         >
-          <div className="flex flex-col gap-4">
-            {tierRowsComponents}
-          </div>
-          
+          <div className="flex flex-col gap-4">{tierRowsComponents}</div>
+
           <DragOverlay>
             {activeItem ? (
               <div className="cursor-grabbing">

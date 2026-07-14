@@ -7,6 +7,14 @@ describe("isAllowedImageHost", () => {
       isAllowedImageHost("https://covers.openlibrary.org/b/id/1-L.jpg"),
     ).toBe(true);
     expect(
+      isAllowedImageHost("https://archive.org/download/covers/1-L.jpg"),
+    ).toBe(true);
+    expect(
+      isAllowedImageHost(
+        "https://ia800404.us.archive.org/view_archive.php?archive=covers",
+      ),
+    ).toBe(true);
+    expect(
       isAllowedImageHost("https://images.igdb.com/igdb/image/upload/x.jpg"),
     ).toBe(true);
   });

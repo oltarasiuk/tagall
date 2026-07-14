@@ -5,6 +5,10 @@
  */
 export const ALLOWED_IMAGE_HOSTS: readonly string[] = [
   "covers.openlibrary.org",
+  // Open Library's Covers endpoint legitimately redirects older covers to its
+  // Internet Archive storage. Keep the redirect hop allowlisted rather than
+  // treating a valid Open Library cover as an unsafe URL.
+  "archive.org",
   "images.igdb.com",
   "cdn2.steamgriddb.com",
   "cdn.steamgriddb.com",
@@ -31,7 +35,15 @@ export function isAllowedImageHost(rawUrl: string): boolean {
       return false;
     }
 
-    return ALLOWED_IMAGE_HOSTS.includes(url.hostname.toLowerCase());
+    const hostname = url.hostname.toLowerCase();
+
+    return (
+      ALLOWED_IMAGE_HOSTS.includes(hostname) ||
+      // The Covers service redirects archive.org through numbered Internet
+      // Archive download nodes, e.g. ia800404.us.archive.org. Restrict this
+      // to that hostname pattern rather than allowing arbitrary subdomains.
+      /^ia\d+\.us\.archive\.org$/.test(hostname)
+    );
   } catch {
     return false;
   }

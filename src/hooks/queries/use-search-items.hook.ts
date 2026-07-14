@@ -8,21 +8,20 @@ import { DEFAULT_ADD_LIMIT } from "../../constants";
 
 type Props = {
   query: string;
-  selectedCollectionId: string;
+  selectedCollectionIds: string[];
   setSearchResults: Dispatch<SetStateAction<SearchResultType[]>>;
   setSelectedItem: Dispatch<SetStateAction<SearchResultType | null>>;
 };
 export const useSearchItems = (props: Props) => {
-  const {
-    query,
-    selectedCollectionId,
-    setSelectedItem,
-    setSearchResults,
-  } = props;
+  const { query, selectedCollectionIds, setSelectedItem, setSearchResults } =
+    props;
 
   const { data, isFetching, isError, refetch } = api.parse.search.useQuery(
     {
-      collectionId: selectedCollectionId,
+      // `collectionId` is retained for the legacy API contract. The empty
+      // multi-select below is what explicitly asks the server to search all.
+      collectionId: "all",
+      collectionIds: selectedCollectionIds,
       query: query.toLowerCase().trim(),
       limit: DEFAULT_ADD_LIMIT,
     },
@@ -31,7 +30,7 @@ export const useSearchItems = (props: Props) => {
 
   const submit = () => {
     const normalizedQuery = query.trim();
-    if (!isFetching && normalizedQuery.length >= 1 && selectedCollectionId) {
+    if (!isFetching && normalizedQuery.length >= 1) {
       setSelectedItem(null);
       void refetch();
     }
