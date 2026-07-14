@@ -1,3 +1,4 @@
+export * from "./collection-slugs.const";
 export * from "./navbar-links.const";
 export * from "./rate-names.const";
 export * from "./tag-icons.const";

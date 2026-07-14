@@ -3,6 +3,7 @@ import type { SearchInputType, SearchResultType } from "../types";
 import { SearchAnilist } from "./anilist.service";
 import { searchVideoByImdb } from "./imdb-crawlee.service";
 import { searchVideo } from "./tmdb.service";
+import { getSearchSourceBySlug } from "../utils/collection-routing.util";
 
 /** Video search: IMDB results first, then TMDB, deduped by parsedId. */
 async function searchVideoWithImdbFirst(
@@ -99,12 +100,15 @@ export const Search = async (props: {
 
   if (input.collectionId === "all") {
     const collections = await ctx.db.collection.findMany({
-      where: { name: { in: ["Film", "Serie", "Manga"] } },
-      select: { id: true, name: true },
+      where: { slug: { in: ["film", "serie", "manga"] } },
+      select: { id: true, name: true, slug: true },
     });
-    const collectionIdByName = Object.fromEntries(
-      collections.map((c) => [c.name, c.id]),
+    const collectionBySlug = Object.fromEntries(
+      collections.map((c) => [c.slug, c]),
     );
+    const filmCollection = collectionBySlug.film;
+    const serieCollection = collectionBySlug.serie;
+    const mangaCollection = collectionBySlug.manga;
     const perSourceLimit = Math.max(5, Math.ceil(limit / 2));
 
     const [videoResults, mangaResults] = await Promise.all([
@@ -112,19 +116,19 @@ export const Search = async (props: {
       SearchAnilist(input.query, perSourceLimit),
     ]);
 
-    const videoWithCollection: SearchResultType[] = videoResults.map((r) => ({
-      ...r,
-      suggestedCollectionId:
-        r.mediaType === "movie"
-          ? collectionIdByName.Film ?? null
-          : collectionIdByName.Serie ?? null,
-      suggestedCollectionName:
-        r.mediaType === "movie" ? "Film" : "Serie",
-    }));
+    const videoWithCollection: SearchResultType[] = videoResults.map((r) => {
+      const target = r.mediaType === "movie" ? filmCollection : serieCollection;
+      return {
+        ...r,
+        suggestedCollectionId: target?.id ?? null,
+        suggestedCollectionName:
+          target?.name ?? (r.mediaType === "movie" ? "Film" : "Serie"),
+      };
+    });
     const mangaWithCollection: SearchResultType[] = mangaResults.map((r) => ({
       ...r,
-      suggestedCollectionId: collectionIdByName.Manga ?? null,
-      suggestedCollectionName: "Manga",
+      suggestedCollectionId: mangaCollection?.id ?? null,
+      suggestedCollectionName: mangaCollection?.name ?? "Manga",
     }));
 
     const combined = [...videoWithCollection, ...mangaWithCollection];
@@ -151,24 +155,21 @@ export const Search = async (props: {
 
   let items: SearchResultType[] = [];
 
-  switch (collection.name) {
-    case "Film":
-    case "Serie":
-      items = (await searchVideoWithImdbFirst(input.query, limit)).map(
-        (r) => ({
-          ...r,
-          suggestedCollectionName: collection.name,
-        }),
-      );
+  switch (getSearchSourceBySlug(collection.slug)) {
+    case "video":
+      items = (await searchVideoWithImdbFirst(input.query, limit)).map((r) => ({
+        ...r,
+        suggestedCollectionName: collection.name,
+      }));
       break;
-    case "Manga":
+    case "manga":
       items = (await SearchAnilist(input.query, limit)).map((r) => ({
         ...r,
-        suggestedCollectionName: "Manga",
+        suggestedCollectionName: collection.name,
       }));
       break;
     default:
-      throw new Error("Collection not found");
+      throw new Error(`No search provider for collection "${collection.slug}"`);
   }
 
   return items;

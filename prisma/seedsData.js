@@ -3,21 +3,25 @@ export const seedsData = {
     {
       id: "cm3a9sw1v000gi1s7appi2tju",
       name: "Film",
+      slug: "film",
       priority: 1,
     },
     {
       id: "cm3bnlve100000ks784yufzt9",
       name: "Serie",
+      slug: "serie",
       priority: 2,
     },
     {
       id: "cm3bnlxhu00020ks7hyps1g0a",
       name: "Book",
+      slug: "book",
       priority: 3,
     },
     {
       id: "cm3bnlyzw00040ks77yx39ddf",
       name: "Manga",
+      slug: "manga",
       priority: 4,
     },
   ],

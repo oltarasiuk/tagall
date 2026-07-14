@@ -24,6 +24,7 @@ import type { ImdbDetailsResultType } from "../../parse/types";
 import { GetEmbedding } from "../../open-ai/services";
 import { UploadImageByUrl, UploadImageByBase64, DeleteFile } from "../../files/files.service";
 import { GetAnilistDetailsById } from "../../parse/services/anilist.service";
+import { getParseSourceBySlug } from "../../parse/utils/collection-routing.util";
 import {
   UpdateItemEmbedding,
   GetItemEmbedding,
@@ -542,23 +543,22 @@ export async function AddToCollection(props: {
     logger.error(`[AddToCollection] Collection not found: ${input.collectionId}`);
     throw new Error("Collection not found");
   }
-  logger.debug(`[AddToCollection] Collection found: ${collection.name}`);
+  logger.debug(`[AddToCollection] Collection found: ${collection.slug}`);
 
   let item;
   try {
-    switch (collection.name) {
-      case "Serie":
-      case "Film": {
+    switch (getParseSourceBySlug(collection.slug)) {
+      case "imdb": {
         const found = await findByImdbId(input.parsedId);
         const mediaType = found?.mediaType ?? "movie";
-        const targetCollectionName = mediaType === "movie" ? "Film" : "Serie";
-        const targetCollection = await ctx.db.collection.findFirst({
-          where: { name: targetCollectionName },
+        const targetSlug = mediaType === "movie" ? "film" : "serie";
+        const targetCollection = await ctx.db.collection.findUnique({
+          where: { slug: targetSlug },
         });
         if (!targetCollection) {
-          throw new Error(`Collection "${targetCollectionName}" not found`);
+          throw new Error(`Collection "${targetSlug}" not found`);
         }
-        logger.debug(`[AddToCollection] Creating video item (${mediaType}) for ${targetCollectionName}`);
+        logger.debug(`[AddToCollection] Creating video item (${mediaType}) for ${targetSlug}`);
         item = await CreateItem({
           ctx,
           type: "imdb",
@@ -567,8 +567,8 @@ export async function AddToCollection(props: {
         });
         break;
       }
-      case "Manga":
-        logger.debug(`[AddToCollection] Creating Anilist item for Manga`);
+      case "anilist":
+        logger.debug(`[AddToCollection] Creating Anilist item for ${collection.slug}`);
         item = await CreateItem({
           ctx,
           type: "anilist",
@@ -577,8 +577,8 @@ export async function AddToCollection(props: {
         });
         break;
       default:
-        logger.error(`[AddToCollection] Invalid collection name: ${collection.name}`);
-        throw new Error("Invalid collection name");
+        logger.error(`[AddToCollection] No provider for collection: ${collection.slug}`);
+        throw new Error(`No provider for collection "${collection.slug}"`);
     }
     logger.debug(`[AddToCollection] Item created successfully: ${item.id} - "${item.title}" (${Date.now() - startTime}ms)`);
   } catch (error) {

@@ -89,6 +89,7 @@ model Collection {
     updatedAt DateTime @updatedAt
 
     name     String @unique
+    slug     String @unique
     priority Int    @default(0)
 
     items       Item[]

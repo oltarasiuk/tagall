@@ -33,6 +33,7 @@ const MEDIA_FILTER_COLLECTIONS: CollectionType[] = MEDIA_FILTER_OPTIONS.map(
   (type) => ({
     id: type,
     name: type,
+    slug: type.toLowerCase(),
     priority: 0,
     createdAt: new Date(),
     updatedAt: new Date(),
