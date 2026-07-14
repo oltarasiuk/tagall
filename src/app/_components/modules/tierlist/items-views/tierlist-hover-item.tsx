@@ -1,7 +1,7 @@
 "use client";
 
 import type { TierItemType } from "../../../../../server/api/modules/item/types";
-import { CloudinaryImage } from "../../../shared";
+import { CloudinaryImage, ItemTypeBadge } from "../../../shared";
 
 type Props = {
   item: TierItemType;
@@ -31,6 +31,7 @@ const TierListHoverItem = (props: Props) => {
         {item.year && (
           <p className="text-xs text-white/80">{item.year}</p>
         )}
+        <ItemTypeBadge collectionName={item.collection.name} className="text-[10px]" />
       </div>
     </div>
   );

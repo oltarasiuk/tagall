@@ -1,7 +1,7 @@
 "use client";
 
 import type { TierItemType } from "../../../../../server/api/modules/item/types";
-import { CloudinaryImage, CardContainer } from "../../../shared";
+import { CloudinaryImage, CardContainer, ItemTypeBadge } from "../../../shared";
 import { Header } from "../../../ui";
 
 type Props = {
@@ -27,6 +27,9 @@ const TierListTitleItem = (props: Props) => {
       <Header vtag="h6" className="line-clamp-2 text-center text-xs">
         {item.title}
       </Header>
+      <div className="flex justify-center">
+        <ItemTypeBadge collectionName={item.collection.name} className="text-[10px]" />
+      </div>
       {item.year && (
         <p className="text-center text-xs text-muted-foreground">{item.year}</p>
       )}

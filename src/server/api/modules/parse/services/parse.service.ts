@@ -60,8 +60,15 @@ export const Search = async (props: {
   const { ctx, input } = props;
   const limit = input.limit ?? 10;
 
-  const selectedCollectionIds =
-    input.collectionId === "all" ? [] : [input.collectionId];
+  const selectedCollectionIds = [
+    ...new Set(
+      input.collectionIds.length
+        ? input.collectionIds
+        : input.collectionId === "all"
+          ? []
+          : [input.collectionId],
+    ),
+  ];
 
   const selectedCollections = selectedCollectionIds.length
     ? await ctx.db.collection.findMany({

@@ -6,7 +6,6 @@ import {
   CloudinaryImage,
   DeleteItemModal,
   ItemTypeBadge,
-  TYPE_BADGE_STYLES,
   UpdateItemModal,
   UpdateItemImageModal,
   UpdateTagsModal,
@@ -20,7 +19,7 @@ type Props = {
 };
 
 const HomeEditItem = (props: Props) => {
-  const { item, selectedCollectionsIds, tags } = props;
+  const { item, tags } = props;
   const itemTags = tags.filter((tag) =>
     tag.collections.map((c) => c.name).includes(item.collection.name),
   );
@@ -62,14 +61,7 @@ const HomeEditItem = (props: Props) => {
               <Header vtag="h5" className="line-clamp-2">
                 {item.title}
               </Header>
-              <div className="flex flex-shrink-0 items-center gap-1.5">
-                <ItemTypeBadge collectionName={item.collection.name} />
-                {selectedCollectionsIds.length > 1 && !TYPE_BADGE_STYLES[item.collection.name] && (
-                  <Header vtag="h6" className="font-bold text-muted-foreground">
-                    {item.collection.name}
-                  </Header>
-                )}
-              </div>
+              <ItemTypeBadge collectionName={item.collection.name} />
             </div>
 
             <Paragraph className="font-semibold text-muted-foreground">

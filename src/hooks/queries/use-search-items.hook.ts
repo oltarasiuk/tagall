@@ -8,18 +8,18 @@ import { DEFAULT_ADD_LIMIT } from "../../constants";
 
 type Props = {
   query: string;
-  selectedCollectionId: string;
+  selectedCollectionIds: string[];
   limit?: number;
   setSearchResults: Dispatch<SetStateAction<SearchResultType[]>>;
   setSelectedItem: Dispatch<SetStateAction<SearchResultType | null>>;
 };
 export const useSearchItems = (props: Props) => {
-  const { query, selectedCollectionId, setSelectedItem, setSearchResults, limit = DEFAULT_ADD_LIMIT } =
+  const { query, selectedCollectionIds, setSelectedItem, setSearchResults, limit = DEFAULT_ADD_LIMIT } =
     props;
 
   const { data, isFetching, isError, refetch } = api.parse.search.useQuery(
     {
-      collectionId: selectedCollectionId,
+      collectionIds: selectedCollectionIds,
       query: query.toLowerCase().trim(),
       limit,
     },

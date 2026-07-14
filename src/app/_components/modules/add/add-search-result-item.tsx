@@ -65,7 +65,7 @@ const AddSearchResultItem = (props: Props) => {
       />
 
       {/* Poster */}
-      <div className="relative z-10 w-[110px] flex-shrink-0 sm:w-[150px]">
+      <div className="relative z-10 aspect-[27/40] w-[110px] flex-shrink-0 self-start sm:w-[150px]">
         {searchResult.image ? (
           <Image
             src={searchResult.image}
@@ -132,23 +132,12 @@ const AddSearchResultItem = (props: Props) => {
           {searchResult.rating != null && (
             <div
               className="flex items-center gap-1"
-              title={
-                searchResult.ratingSource
-                  ? `${searchResult.ratingSource}${searchResult.ratingVotes != null ? ` · ${searchResult.ratingVotes.toLocaleString()} votes` : ""}`
-                  : undefined
-              }
+              title={searchResult.ratingSource ?? undefined}
             >
               <ItemRatingBadge
                 rate={searchResult.rating}
                 className="sm:text-md text-base"
               />
-              {searchResult.ratingVotes != null && (
-                <span className="text-xs text-muted-foreground">
-                  · {searchResult.ratingVotes >= 1000
-                    ? `${(searchResult.ratingVotes / 1000).toFixed(1).replace(/\.0$/, "")}k`
-                    : searchResult.ratingVotes} votes
-                </span>
-              )}
             </div>
           )}
         </div>

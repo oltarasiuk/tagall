@@ -24,6 +24,7 @@ import { SearchInputSchema } from "../../../../server/api/modules/parse/schemas"
 
 export const AddParamsSchema = SearchInputSchema.pick({
   query: true,
+  collectionIds: true,
 });
 
 export type AddParamsType = z.infer<typeof AddParamsSchema>;
@@ -33,19 +34,24 @@ function AddContainer() {
 
   const { getParam, setQueryParams } = useQueryParams<AddParamsType>({
     schema: AddParamsSchema,
-    defaultParams: { query: "" },
+    defaultParams: { query: "", collectionIds: [] },
   });
 
   const [query, setQuery] = useState(getParam("query"));
+  const [selectedCollectionIds, setSelectedCollectionIds] = useState(
+    getParam("collectionIds"),
+  );
   const [searchResults, setSearchResults] = useState<SearchResultType[]>([]);
   const [selectedItem, setSelectedItem] = useState<SearchResultType | null>(
     null,
   );
-  const [selectedCollectionId, setSelectedCollectionId] = useState("all");
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [limit, setLimit] = useState(10);
 
-  useDebouncedQueryParams<AddParamsType>({ query }, setQueryParams);
+  useDebouncedQueryParams<AddParamsType>(
+    { query, collectionIds: selectedCollectionIds },
+    setQueryParams,
+  );
 
   const { tags } = useGetUserTags({
     collectionsIds: selectedItem?.suggestedCollectionId
@@ -55,7 +61,7 @@ function AddContainer() {
 
   const { isLoading, submit: baseSubmit } = useSearchItems({
     query,
-    selectedCollectionId,
+    selectedCollectionIds,
     limit,
     setSearchResults,
     setSelectedItem,
@@ -71,24 +77,15 @@ function AddContainer() {
     if (hasSubmitted) baseSubmit();
     // A selected tab changes the server request, never a client-side filter.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedCollectionId, limit]);
+  }, [selectedCollectionIds, limit]);
 
   return (
     <Container>
       <div className="w-min">
         <CollectionsTabs
           collections={collections}
-          selectedCollectionsIds={
-            selectedCollectionId === "all" ? [] : [selectedCollectionId]
-          }
-          setSelectedCollectionsIds={(value) => {
-            const current =
-              selectedCollectionId === "all" ? [] : [selectedCollectionId];
-            const ids = typeof value === "function" ? value(current) : value;
-            const next = ids[0] ?? "all";
-            setSelectedCollectionId(next);
-          }}
-          isMany={false}
+          selectedCollectionsIds={selectedCollectionIds}
+          setSelectedCollectionsIds={setSelectedCollectionIds}
         />
       </div>
 

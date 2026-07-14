@@ -1,6 +1,12 @@
 import { Header } from "../../../ui";
 import type { ItemType } from "../../../../../server/api/modules/item/types";
-import { CardContainer, CloudinaryImage, ItemExternalRatingBadge, ItemRatingBadge } from "../../../shared";
+import {
+  CardContainer,
+  CloudinaryImage,
+  ItemExternalRatingBadge,
+  ItemRatingBadge,
+  ItemTypeBadge,
+} from "../../../shared";
 
 type Props = {
   item: ItemType;
@@ -42,6 +48,7 @@ const HomeMediumItem = (props: Props) => {
         <Header vtag="h6" className="line-clamp-3 text-center">
           {item.title}
         </Header>
+        <ItemTypeBadge collectionName={item.collection.name} className="text-xs" />
         {(item.rate != null || item.externalRating != null) && (
           <div className="flex items-center gap-2">
             {item.rate != null && (

@@ -1,4 +1,4 @@
-import { Badge, Header, Paragraph } from "../../../ui";
+import { Header, Paragraph } from "../../../ui";
 import type { ItemType } from "../../../../../server/api/modules/item/types";
 import {
   CardContainer,
@@ -8,7 +8,6 @@ import {
   ItemStatusBadge,
   ItemTypeBadge,
   ItemYearBadge,
-  TYPE_BADGE_STYLES,
 } from "../../../shared";
 
 type Props = {
@@ -17,7 +16,7 @@ type Props = {
 };
 
 const HomeLargeItem = (props: Props) => {
-  const { item, selectedCollectionsIds } = props;
+  const { item } = props;
 
   return (
     <CardContainer className="relative h-fit cursor-pointer overflow-hidden p-0 transition-all duration-300 hover:scale-105 hover:border-primary hover:shadow-md">
@@ -62,18 +61,7 @@ const HomeLargeItem = (props: Props) => {
           <Header vtag="h5" className="line-clamp-2 leading-snug">
             {item.title}
           </Header>
-          <div className="flex flex-shrink-0 items-center gap-1.5">
-            <ItemTypeBadge collectionName={item.collection.name} />
-            {selectedCollectionsIds.length > 1 &&
-              !TYPE_BADGE_STYLES[item.collection.name] && (
-                <Badge
-                  variant="outline"
-                  className="text-xs text-muted-foreground"
-                >
-                  {item.collection.name}
-                </Badge>
-              )}
-          </div>
+          <ItemTypeBadge collectionName={item.collection.name} />
         </div>
 
         {/* Description */}
