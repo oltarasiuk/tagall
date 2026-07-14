@@ -217,12 +217,14 @@ model FieldGroup {
 model Field {
     id String @id @default(cuid())
 
-    value String @unique
+    // Scoped to its group: "action" may exist as a genre and as a keyword.
+    value String
 
     items        Item[]
     fieldGroup   FieldGroup @relation(fields: [fieldGroupId], references: [id])
     fieldGroupId String
 
+    @@unique([fieldGroupId, value])
     @@index([value, fieldGroupId])
 }
 

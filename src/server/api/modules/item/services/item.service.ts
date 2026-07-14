@@ -46,6 +46,10 @@ import {
   buildUserItemsWhere,
   buildUserItemsOrderBy,
 } from "../utils/build-user-items-query.util";
+import {
+  buildFieldCandidates,
+  getFieldKey,
+} from "../utils/build-field-candidates.util";
 
 const ItemResponse = new ItemResponseClass();
 
@@ -245,59 +249,28 @@ async function CreateItem(props: {
               select: { id: true, name: true },
             });
       logger.debug(`[CreateItem] Found ${fieldGroups.length} field groups for ${parsedId}`);
-      
-      const fields: { field: string; fieldGroupId: string }[] = [];
-      for (const fieldGroup of fieldGroups) {
-        const value = details[fieldGroup.name as keyof typeof details]!;
-        switch (typeof value) {
-          case "number":
-          case "string": {
-            // Normalize: lowercase + trim for consistency
-            const normalizedField = normalizeText(String(value));
-            if (normalizedField) {
-              fields.push({ field: normalizedField, fieldGroupId: fieldGroup.id });
-            }
-            break;
-          }
-          case "object": {
-            if (!Array.isArray(value)) {
-              continue;
-            }
-            for (const field of value) {
-              // Normalize: lowercase + trim for consistency
-              const normalizedField = normalizeText(String(field));
-              if (normalizedField) {
-                fields.push({
-                  field: normalizedField,
-                  fieldGroupId: fieldGroup.id,
-                });
-              }
-            }
-            break;
-          }
-        }
-      }
 
-      logger.debug(`[CreateItem] Upserting ${fields.length} fields for ${parsedId}`);
-      const values = [...new Set(fields.map((f) => f.field))];
+      const candidates = buildFieldCandidates(details, fieldGroups);
+
+      logger.debug(`[CreateItem] Upserting ${candidates.length} fields for ${parsedId}`);
+      // A field is identified by (fieldGroupId, value): looking it up by value
+      // alone would reuse a genre row for a keyword of the same name.
       const existingFields =
-        values.length === 0
+        candidates.length === 0
           ? []
           : await prisma.field.findMany({
-              where: { value: { in: values } },
-              select: { id: true, value: true },
+              where: {
+                OR: candidates.map(({ value, fieldGroupId }) => ({
+                  value,
+                  fieldGroupId,
+                })),
+              },
+              select: { id: true, value: true, fieldGroupId: true },
             });
-      const existingValues = new Set(existingFields.map((e) => e.value));
-      const toCreateMap = new Map<string, string>();
-      for (const { field, fieldGroupId } of fields) {
-        if (!existingValues.has(field) && !toCreateMap.has(field)) {
-          toCreateMap.set(field, fieldGroupId);
-        }
-      }
-      const toCreate = [...toCreateMap.entries()].map(([value, fieldGroupId]) => ({
-        value,
-        fieldGroupId,
-      }));
+      const existingKeys = new Set(existingFields.map(getFieldKey));
+      const toCreate = candidates.filter(
+        (candidate) => !existingKeys.has(getFieldKey(candidate)),
+      );
       const createdFields =
         toCreate.length > 0
           ? await prisma.field.createManyAndReturn({
