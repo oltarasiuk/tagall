@@ -5,6 +5,7 @@ import {
 } from "../../media/constants/media-kind.const";
 import { dedupeSearchResults } from "../../media/services/search-deduplication.service";
 import { searchMedia } from "../../media/services/media-search.service";
+import { rankSearchResults } from "../../media/services/search-ranking.service";
 import {
   toLegacySearchResult,
   type CollectionRefType,
@@ -103,7 +104,10 @@ export const Search = async (props: {
 
   // One work described by two providers must reach the UI as one card: hiding
   // the duplicate in React would still let the add flow create two items.
-  const merged = dedupeSearchResults(results);
+  const merged = rankSearchResults(
+    dedupeSearchResults(results),
+    input.query,
+  ).slice(0, limit);
 
   const collections = await ctx.db.collection.findMany({
     select: { id: true, name: true, slug: true },

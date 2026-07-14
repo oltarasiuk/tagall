@@ -21,6 +21,12 @@ export type NormalizedRatingType = {
   kind: "user" | "critic" | "bayesian";
 };
 
+export type PopularitySignalType = {
+  source: ProviderNameType;
+  value: number;
+  kind: "votes" | "members" | "readers" | "owners" | "activity" | "hype";
+};
+
 export type ImageCandidateType = {
   source: ProviderNameType;
   url: string;
@@ -60,6 +66,8 @@ export type ProviderSearchResultType = {
   isbns: string[];
   imageCandidates: ImageCandidateType[];
   rating: NormalizedRatingType | null;
+  /** Provider-native signal; normalized only within one search candidate pool. */
+  popularity?: PopularitySignalType | null;
   genres: string[];
   keywords: string[];
   /** Lower = more relevant, as ranked by the provider itself. */

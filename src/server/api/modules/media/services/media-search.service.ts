@@ -49,9 +49,13 @@ export async function searchMedia(
 
   // In the "all" tab each provider only contributes a slice, so one chatty
   // source cannot fill the page on its own.
-  const perProviderLimit = mediaKind
-    ? limit
-    : Math.max(5, Math.ceil(limit / adapters.length));
+  const perProviderLimit = Math.min(
+    30,
+    Math.max(
+      limit * 2,
+      mediaKind ? 10 : Math.ceil((limit * 2) / adapters.length),
+    ),
+  );
 
   const settled = await Promise.allSettled(
     adapters.map((adapter) =>
