@@ -24,12 +24,8 @@ import {
   DeleteUploadedImage,
 } from "../../files/files.service";
 import { selectImageCandidates } from "../../media/utils/select-image-candidates.util";
-import {
-  getCollectionSlugForMediaKind,
-  getMediaKindForCollectionSlug,
-} from "../../media/constants/media-kind.const";
+import { getCollectionSlugForMediaKind } from "../../media/constants/media-kind.const";
 import { MediaError } from "../../media/errors/media.error";
-import { providerRegistry } from "../../media/providers";
 import { getMediaDetails } from "../../media/services/media-details.service";
 import type {
   NormalizedItemDetailsType,
@@ -61,6 +57,7 @@ import {
   buildFieldCandidates,
   getFieldKey,
 } from "../utils/build-field-candidates.util";
+import { resolveAddSource } from "../utils/resolve-add-source.util";
 
 const ItemResponse = new ItemResponseClass();
 
@@ -559,31 +556,18 @@ export async function AddToCollection(props: {
   }
   logger.debug(`[AddToCollection] Collection found: ${collection.slug}`);
 
-  const mediaKind = getMediaKindForCollectionSlug(collection.slug);
-
-  if (!mediaKind) {
-    throw new MediaError(
-      "PROVIDER_DISABLED",
-      `No provider for collection "${collection.slug}"`,
-    );
-  }
-
-  const [adapter] = providerRegistry.getEnabledForKind(mediaKind);
-
-  if (!adapter) {
-    throw new MediaError(
-      "PROVIDER_DISABLED",
-      `No enabled provider for "${mediaKind}"`,
-    );
-  }
+  const source = resolveAddSource({
+    parsedId: input.parsedId,
+    collectionSlug: collection.slug,
+  });
 
   let item;
   try {
     // Details are re-fetched server-side: the client only names the provider
     // and the external id.
     const details = await getMediaDetails({
-      provider: adapter.name,
-      externalId: input.parsedId,
+      provider: source.provider,
+      externalId: source.externalId,
     });
 
     // The provider decides what the item actually is — a TMDB search from the
@@ -604,8 +588,8 @@ export async function AddToCollection(props: {
     logger.debug(`[AddToCollection] Creating ${details.mediaKind} item in ${targetSlug}`);
     item = await CreateItem({
       ctx,
-      provider: adapter.name,
-      externalId: input.parsedId,
+      provider: source.provider,
+      externalId: source.externalId,
       details,
       collection: targetCollection,
     });

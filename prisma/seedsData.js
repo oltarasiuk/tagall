@@ -35,6 +35,7 @@ export const seedsData = {
         "cm3bnlyzw00040ks77yx39ddf",
         "cm3a9sw1v000gi1s7appi2tju",
         "cm3bnlve100000ks784yufzt9",
+        "cm3bnlxhu00020ks7hyps1g0a",
       ],
     },
     {
@@ -53,6 +54,7 @@ export const seedsData = {
         "cm3bnlyzw00040ks77yx39ddf",
         "cm3a9sw1v000gi1s7appi2tju",
         "cm3bnlve100000ks784yufzt9",
+        "cm3bnlxhu00020ks7hyps1g0a",
       ],
     },
 
@@ -72,6 +74,7 @@ export const seedsData = {
         "cm3bnlyzw00040ks77yx39ddf",
         "cm3a9sw1v000gi1s7appi2tju",
         "cm3bnlve100000ks784yufzt9",
+        "cm3bnlxhu00020ks7hyps1g0a",
       ],
     },
     {
