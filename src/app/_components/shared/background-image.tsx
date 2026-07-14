@@ -1,14 +1,58 @@
 "use client";
 
-import { useState, type ComponentPropsWithoutRef } from "react";
+import { useEffect, useState, type ComponentPropsWithoutRef } from "react";
 import Image from "next/image";
 import { cn } from "../../../lib";
 
-type Props = ComponentPropsWithoutRef<"div"> & { image: string };
+type Props = ComponentPropsWithoutRef<"div"> & {
+  image: string;
+  highQualityImage?: string;
+};
 
 export const BackgroundImage = (props: Props) => {
-  const { children, image, className, ...restProps } = props;
-  const [isLoaded, setIsLoaded] = useState(false);
+  const { children, image, highQualityImage, className, ...restProps } = props;
+  const [isLowQualityLoaded, setIsLowQualityLoaded] = useState(false);
+  const [shouldLoadHighQuality, setShouldLoadHighQuality] = useState(false);
+  const [isHighQualityLoaded, setIsHighQualityLoaded] = useState(false);
+  const highQualitySource = highQualityImage ?? image.replace("-bg.webp", ".webp");
+
+  useEffect(() => {
+    setIsLowQualityLoaded(false);
+    setShouldLoadHighQuality(false);
+    setIsHighQualityLoaded(false);
+
+    const startHighQualityLoading = () => {
+      if (typeof globalThis.requestIdleCallback === "function") {
+        const idleCallbackId = globalThis.requestIdleCallback(
+          () => setShouldLoadHighQuality(true),
+          { timeout: 2_500 },
+        );
+
+        return () => globalThis.cancelIdleCallback(idleCallbackId);
+      }
+
+      const timeoutId = setTimeout(() => setShouldLoadHighQuality(true), 1_500);
+
+      return () => clearTimeout(timeoutId);
+    };
+
+    let cancelHighQualityLoading: (() => void) | undefined;
+
+    const onWindowLoad = () => {
+      cancelHighQualityLoading = startHighQualityLoading();
+    };
+
+    if (document.readyState === "complete") {
+      onWindowLoad();
+    } else {
+      window.addEventListener("load", onWindowLoad, { once: true });
+    }
+
+    return () => {
+      window.removeEventListener("load", onWindowLoad);
+      cancelHighQualityLoading?.();
+    };
+  }, [image, highQualitySource]);
 
   return (
     <div
@@ -24,7 +68,7 @@ export const BackgroundImage = (props: Props) => {
         <div
           className={cn(
             "absolute inset-0 bg-gradient-to-br from-background via-muted to-background transition-opacity duration-500",
-            isLoaded ? "opacity-0" : "opacity-100",
+            isLowQualityLoaded ? "opacity-0" : "opacity-100",
           )}
         />
         <Image
@@ -35,11 +79,28 @@ export const BackgroundImage = (props: Props) => {
           unoptimized
           className={cn(
             "object-cover object-center transition-opacity duration-500",
-            isLoaded ? "opacity-[0.10]" : "opacity-0",
+            isLowQualityLoaded ? "opacity-[0.10]" : "opacity-0",
           )}
           priority
-          onLoad={() => setIsLoaded(true)}
+          onLoad={() => setIsLowQualityLoaded(true)}
         />
+        {shouldLoadHighQuality && (
+          <Image
+            src={highQualitySource}
+            alt=""
+            aria-hidden="true"
+            fill
+            sizes="100vw"
+            unoptimized
+            loading="lazy"
+            fetchPriority="low"
+            className={cn(
+              "object-cover object-center transition-opacity duration-700",
+              isHighQualityLoaded ? "opacity-[0.10]" : "opacity-0",
+            )}
+            onLoad={() => setIsHighQualityLoaded(true)}
+          />
+        )}
       </div>
 
       {/* Content container with proper positioning */}

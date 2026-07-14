@@ -24,7 +24,6 @@ export const CloudinaryImage = (props: Props) => {
     <CldImage
       loading={priority ? undefined : "lazy"}
       priority={priority}
-      placeholder="blur"
       alt={isBackground ? "" : `cover ${publicId}`}
       src={src}
       width={isBackground ? 50 : (width ?? 200)}
