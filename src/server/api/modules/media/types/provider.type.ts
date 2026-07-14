@@ -38,6 +38,10 @@ export const PROVIDER_PREFIXES = {
 } as const satisfies Record<ExternalProvider, string>;
 
 export type ProviderNameType = (typeof PROVIDER_PREFIXES)[ExternalProvider];
+export const PROVIDER_NAMES = Object.values(PROVIDER_PREFIXES) as [
+  ProviderNameType,
+  ...ProviderNameType[],
+];
 
 const PROVIDER_BY_PREFIX = new Map<string, ExternalProvider>(
   Object.entries(PROVIDER_PREFIXES).map(([provider, prefix]) => [

@@ -24,7 +24,7 @@ import {
   DeleteUploadedImage,
 } from "../../files/files.service";
 import { selectImageCandidates } from "../../media/utils/select-image-candidates.util";
-import { getCollectionSlugForMediaKind } from "../../media/constants/media-kind.const";
+import { isMediaKindAllowedInCollection } from "../../media/constants/media-kind.const";
 import { MediaError } from "../../media/errors/media.error";
 import { getMediaDetails } from "../../media/services/media-details.service";
 import type {
@@ -57,7 +57,7 @@ import {
   buildFieldCandidates,
   getFieldKey,
 } from "../utils/build-field-candidates.util";
-import { resolveAddSource } from "../utils/resolve-add-source.util";
+import { providerRegistry } from "../../media/providers";
 
 const ItemResponse = new ItemResponseClass();
 
@@ -113,8 +113,9 @@ async function CreateItem(props: {
   externalId: string;
   details: NormalizedItemDetailsType;
   collection: { id: string; name: string; slug: string };
+  selectedImageUrl?: string;
 }) {
-  const { ctx, provider, externalId, details, collection } = props;
+  const { ctx, provider, externalId, details, collection, selectedImageUrl } = props;
 
   const startTime = Date.now();
 
@@ -173,11 +174,27 @@ async function CreateItem(props: {
     details.imageCandidates,
     details.mediaKind,
   );
+  const selectedCandidate = selectedImageUrl
+    ? candidates.find((candidate) => candidate.url === selectedImageUrl) ?? {
+        // A manual URL is still downloaded by the same hardened pipeline.
+        // Its host, redirects, MIME type, dimensions and bytes are validated
+        // there before anything reaches Cloudinary.
+        source: provider,
+        url: selectedImageUrl,
+        width: null,
+        height: null,
+        language: null,
+        likes: null,
+        kind: "cover" as const,
+        canPersist: true,
+      }
+    : null;
+  const candidatesToTry = selectedCandidate ? [selectedCandidate] : candidates;
 
   let image: string | null = null;
   let lastImageError: unknown = null;
 
-  for (const candidate of candidates) {
+  for (const candidate of candidatesToTry) {
     try {
       image = await DownloadAndUploadProviderImage({
         folder: collection.name,
@@ -542,7 +559,7 @@ export async function AddToCollection(props: {
   const { ctx, input } = props;
 
   logger.debug(`[AddToCollection] Starting to add item to collection`);
-  logger.debug(`[AddToCollection] User: ${ctx.session.user.id}, ParsedId: ${input.parsedId}, CollectionId: ${input.collectionId}`);
+  logger.debug(`[AddToCollection] User: ${ctx.session.user.id}, Provider: ${input.provider}, ExternalId: ${input.externalId}, CollectionId: ${input.collectionId}`);
   const startTime = Date.now();
 
   logger.debug(`[AddToCollection] Fetching collection info: ${input.collectionId}`);
@@ -556,50 +573,60 @@ export async function AddToCollection(props: {
   }
   logger.debug(`[AddToCollection] Collection found: ${collection.slug}`);
 
-  const source = resolveAddSource({
-    parsedId: input.parsedId,
-    collectionSlug: collection.slug,
-  });
+  if (!isMediaKindAllowedInCollection(input.mediaKind, collection.slug)) {
+    throw new MediaError(
+      "MEDIA_KIND_MISMATCH",
+      `${input.mediaKind} cannot be added to the ${collection.slug} collection`,
+    );
+  }
+
+  const adapter = providerRegistry.getByName(input.provider);
+  if (!adapter?.enabled) {
+    throw new MediaError(
+      "PROVIDER_DISABLED",
+      `Provider "${input.provider}" is not available`,
+      { provider: input.provider },
+    );
+  }
+  if (!adapter.supportedKinds.includes(input.mediaKind)) {
+    throw new MediaError(
+      "MEDIA_KIND_MISMATCH",
+      `Provider "${input.provider}" does not support ${input.mediaKind}`,
+      { provider: input.provider },
+    );
+  }
 
   let item;
   try {
     // Details are re-fetched server-side: the client only names the provider
     // and the external id.
     const details = await getMediaDetails({
-      provider: source.provider,
-      externalId: source.externalId,
+      provider: input.provider,
+      externalId: input.externalId,
     });
 
-    // The provider decides what the item actually is — a TMDB search from the
-    // Film tab may well return a series.
-    const targetSlug = getCollectionSlugForMediaKind(details.mediaKind);
-    const targetCollection =
-      targetSlug === collection.slug
-        ? collection
-        : await ctx.db.collection.findUnique({ where: { slug: targetSlug } });
-
-    if (!targetCollection) {
+    if (details.mediaKind !== input.mediaKind) {
       throw new MediaError(
         "MEDIA_KIND_MISMATCH",
-        `Collection "${targetSlug}" not found for ${details.mediaKind}`,
+        `Provider returned ${details.mediaKind} for requested ${input.mediaKind}`,
+        { provider: input.provider },
       );
     }
 
-    logger.debug(`[AddToCollection] Creating ${details.mediaKind} item in ${targetSlug}`);
+    logger.debug(`[AddToCollection] Creating ${details.mediaKind} item in ${collection.slug}`);
     item = await CreateItem({
       ctx,
-      provider: source.provider,
-      externalId: source.externalId,
+      provider: input.provider,
+      externalId: input.externalId,
       details,
-      collection: targetCollection,
+      collection,
+      selectedImageUrl: input.selectedImageUrl,
     });
     logger.debug(`[AddToCollection] Item created successfully: ${item.id} - "${item.title}" (${Date.now() - startTime}ms)`);
   } catch (error) {
     const duration = Date.now() - startTime;
     logger.error(`[AddToCollection] Error creating item after ${duration}ms:`, error);
-    throw new Error(
-      `Failed to create item: ${error instanceof Error ? error.message : "Unknown error"}`,
-    );
+    throw error;
   }
 
   if (!item) {
@@ -608,8 +635,10 @@ export async function AddToCollection(props: {
   }
 
   logger.debug(`[AddToCollection] Creating user-to-item relationship`);
-  const userToItem = await ctx.db.userToItem.create({
-    data: {
+  let userToItem;
+  try {
+    userToItem = await ctx.db.userToItem.create({
+      data: {
       userId: ctx.session.user.id,
       itemId: item.id,
       rate: input.rate ?? null,
@@ -619,8 +648,19 @@ export async function AddToCollection(props: {
           connect: input.tagsIds.map((tag) => ({ id: tag })),
         },
       }),
-    },
-  });
+      },
+    });
+  } catch (error) {
+    if (
+      error &&
+      typeof error === "object" &&
+      "code" in error &&
+      (error as { code: string }).code === "P2002"
+    ) {
+      throw new MediaError("ALREADY_ADDED", "Item is already in your collection");
+    }
+    throw error;
+  }
   logger.debug(`[AddToCollection] User-to-item relationship created: ${userToItem.id}`);
 
   // Fire-and-forget: embedding is only needed for similarity search later,
@@ -652,7 +692,10 @@ export async function AddToCollection(props: {
   const totalDuration = Date.now() - startTime;
   logger.debug(`[AddToCollection] Successfully added "${item.title}" to collection "${collection.name}" (Total: ${totalDuration}ms)`);
 
-  return "Item added successfully!";
+  return {
+    itemId: item.id,
+    identifiers: item.parsedId,
+  };
 }
 
 export async function UpdateItem(props: {

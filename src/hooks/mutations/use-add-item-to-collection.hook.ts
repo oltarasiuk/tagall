@@ -66,7 +66,9 @@ export const useAddItemToCollection = (props: Props) => {
       rate,
       collectionId: selectedCollectionId,
       tagsIds: tagsIds,
-      parsedId: selectedItem.parsedId,
+      provider: selectedItem.provider,
+      externalId: selectedItem.externalId,
+      mediaKind: selectedItem.mediaKind,
       ...((commentTitle || commentDescription) && {
         comment: {
           title: commentTitle,

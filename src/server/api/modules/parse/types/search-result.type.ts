@@ -1,4 +1,5 @@
 import type { TmdbMediaType } from "./tmdb-media-type.type";
+import type { MediaKindType, ProviderNameType } from "../../media/types";
 
 export type SearchResultType = {
   id: string | null;
@@ -8,6 +9,10 @@ export type SearchResultType = {
   description: string | null;
   keywords: string[];
   parsedId: string;
+  /** Provider identity fields used by the server-side create flow. */
+  provider: ProviderNameType;
+  externalId: string;
+  mediaKind: MediaKindType;
   /** Present when source is TMDB (video search). */
   mediaType?: TmdbMediaType;
   /** Target collection to add the item to (e.g. when searchAll is used). */

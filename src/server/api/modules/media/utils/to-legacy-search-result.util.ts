@@ -39,6 +39,9 @@ export function toLegacySearchResult(
     description: result.description,
     keywords: result.keywords,
     parsedId: buildCanonicalKey(provider, result.externalId),
+    provider: result.provider,
+    externalId: result.externalId,
+    mediaKind: result.mediaKind,
     ...(toMediaType(result.mediaKind) && {
       mediaType: toMediaType(result.mediaKind),
     }),

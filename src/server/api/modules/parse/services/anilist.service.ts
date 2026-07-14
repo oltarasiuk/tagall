@@ -136,6 +136,9 @@ export async function SearchAnilist(
     const averageScore = media.averageScore ?? null;
     return {
       id: null,
+      provider: "anilist",
+      externalId: parsedId,
+      mediaKind: "manga",
       description: cleanText(description ?? ""),
       image,
       keywords,

@@ -1,9 +1,13 @@
 import { ItemStatus } from "@prisma/client";
 import { z } from "zod";
+import { MEDIA_KINDS, PROVIDER_NAMES } from "../../media/types/provider.type";
 
 export const AddToCollectionInputSchema = z.object({
-  parsedId: z.string(),
+  provider: z.enum(PROVIDER_NAMES),
+  externalId: z.string().min(1).max(255),
+  mediaKind: z.enum(MEDIA_KINDS),
   collectionId: z.string().cuid(),
+  selectedImageUrl: z.string().url().optional(),
   rate: z.number().int().min(0).max(10),
   status: z.nativeEnum(ItemStatus),
   comment: z

@@ -219,6 +219,9 @@ export async function searchVideo(
       seenImdb.add(imdbId);
       results.push({
         id: null,
+        provider: "imdb",
+        externalId: imdbId,
+        mediaKind: c.mediaType === "movie" ? "film" : "serie",
         title: c.title,
         image: c.image,
         year: c.year,
