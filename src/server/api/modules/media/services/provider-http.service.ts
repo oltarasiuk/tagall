@@ -1,7 +1,7 @@
 import axios, { type AxiosRequestConfig, type AxiosResponse } from "axios";
-import { logger } from "~/lib/logger";
 import { MediaError } from "../errors/media.error";
 import type { ProviderNameType } from "../types";
+import { logMediaOperation } from "./media-telemetry.service";
 import { scheduleProviderRequest } from "./provider-limiter.service";
 import {
   DEFAULT_MAX_RETRIES,
@@ -17,6 +17,9 @@ type ProviderRequestOptionsType = {
   timeoutMs: number;
   maxRetries?: number;
 };
+
+const toErrorCode = (error: unknown): string =>
+  error instanceof MediaError ? error.code : "PROVIDER_BAD_RESPONSE";
 
 function toMediaError(
   provider: ProviderNameType,
@@ -69,9 +72,12 @@ export async function providerRequest<T>(
     options;
 
   let lastError: unknown;
+  let attempts = 0;
+  const requestStartedAt = Date.now();
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     const startedAt = Date.now();
+    attempts = attempt;
 
     try {
       const response: AxiosResponse<T> = await scheduleProviderRequest(
@@ -79,9 +85,13 @@ export async function providerRequest<T>(
         () => axios.request<T>({ ...config, timeout: timeoutMs }),
       );
 
-      logger.debug(
-        `[media] ${provider} ${operation} ${response.status} (${Date.now() - startedAt}ms, attempt ${attempt + 1})`,
-      );
+      logMediaOperation({
+        provider,
+        operation,
+        status: response.status,
+        retryCount: attempt,
+        durationMs: Date.now() - startedAt,
+      });
 
       return response.data;
     } catch (error) {
@@ -89,10 +99,6 @@ export async function providerRequest<T>(
       const status = axios.isAxiosError(error)
         ? (error.response?.status ?? null)
         : null;
-
-      logger.debug(
-        `[media] ${provider} ${operation} failed with ${status ?? "network error"} (${Date.now() - startedAt}ms, attempt ${attempt + 1})`,
-      );
 
       if (attempt === maxRetries || !isRetryableStatus(status)) {
         break;
@@ -107,5 +113,18 @@ export async function providerRequest<T>(
     }
   }
 
-  throw toMediaError(provider, lastError);
+  const mediaError = toMediaError(provider, lastError);
+
+  logMediaOperation({
+    provider,
+    operation,
+    status: axios.isAxiosError(lastError)
+      ? (lastError.response?.status ?? null)
+      : null,
+    code: toErrorCode(mediaError),
+    retryCount: attempts,
+    durationMs: Date.now() - requestStartedAt,
+  });
+
+  throw mediaError;
 }

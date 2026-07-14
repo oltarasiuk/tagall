@@ -25,8 +25,12 @@ import {
 } from "../../files/files.service";
 import { selectImageCandidates } from "../../media/utils/select-image-candidates.util";
 import { isMediaKindAllowedInCollection } from "../../media/constants/media-kind.const";
-import { MediaError } from "../../media/errors/media.error";
+import { MediaError, isMediaError } from "../../media/errors/media.error";
 import { getMediaDetails } from "../../media/services/media-details.service";
+import {
+  logItemCreated,
+  logMediaOperation,
+} from "../../media/services/media-telemetry.service";
 import type {
   NormalizedItemDetailsType,
   ProviderNameType,
@@ -205,10 +209,13 @@ async function CreateItem(props: {
       break;
     } catch (error) {
       lastImageError = error;
-      logger.error(
-        `[CreateItem] Poster candidate from ${candidate.source} rejected for ${parsedId}`,
-        error,
-      );
+      logMediaOperation({
+        provider: candidate.source,
+        operation: "image",
+        code: isMediaError(error) ? error.code : "POSTER_DOWNLOAD_FAILED",
+        canonicalKey: parsedId,
+        durationMs: Date.now() - uploadStartTime,
+      });
     }
   }
 
@@ -354,9 +361,13 @@ async function CreateItem(props: {
   }
 
   const transactionDuration = Date.now() - transactionStartTime;
-  const totalDuration = Date.now() - startTime;
   logger.debug(`[CreateItem] Transaction completed for ${parsedId} (${transactionDuration}ms)`);
-  logger.debug(`[CreateItem] Successfully created item: ${transactionResult.id} - "${transactionResult.title}" (Total: ${totalDuration}ms)`);
+  logItemCreated({
+    provider,
+    canonicalKey: parsedId,
+    itemId: transactionResult.id,
+    durationMs: Date.now() - startTime,
+  });
 
   return transactionResult;
 }

@@ -8,6 +8,7 @@ import { env } from "../../../../env";
 import { logger } from "~/lib/logger";
 import { MediaError } from "../media/errors/media.error";
 import { downloadProviderImage } from "../media/services/image-download.service";
+import { logMediaOperation } from "../media/services/media-telemetry.service";
 import type { ImageCandidateType, MediaKindType } from "../media/types";
 
 cloudinary.config({
@@ -135,9 +136,12 @@ export const DownloadAndUploadProviderImage = async (props: {
     );
   }
 
-  logger.debug(
-    `[DownloadAndUploadProviderImage] Stored ${candidate.source} cover for ${canonicalKey} as ${imageId} (${Date.now() - startTime}ms)`,
-  );
+  logMediaOperation({
+    provider: candidate.source,
+    operation: "image",
+    canonicalKey,
+    durationMs: Date.now() - startTime,
+  });
 
   return imageId;
 };

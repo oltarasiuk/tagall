@@ -1,7 +1,8 @@
-import { MediaError } from "../errors/media.error";
+import { MediaError, isMediaError } from "../errors/media.error";
 import { providerRegistry, type ProviderRegistryType } from "../providers";
 import type { NormalizedItemDetailsType, ProviderNameType } from "../types";
 import { enrichBookDetails } from "./book-enrichment.service";
+import { logMediaOperation } from "./media-telemetry.service";
 
 /**
  * Details are always re-fetched server-side from provider + external id. The
@@ -32,9 +33,32 @@ export async function getMediaDetails(props: {
     );
   }
 
-  const details = await adapter.getDetails(externalId);
+  const startedAt = Date.now();
 
-  // Books are described by two providers; the second one is looked up here so
-  // the item is stored with both identities and the fuller metadata.
-  return enrichBookDetails({ provider, details, registry });
+  try {
+    const details = await adapter.getDetails(externalId);
+
+    // Books are described by two providers; the second one is looked up here so
+    // the item is stored with both identities and the fuller metadata.
+    const enriched = await enrichBookDetails({ provider, details, registry });
+
+    logMediaOperation({
+      provider,
+      operation: "details",
+      canonicalKey: `${provider}:${externalId.trim()}`,
+      durationMs: Date.now() - startedAt,
+    });
+
+    return enriched;
+  } catch (error) {
+    logMediaOperation({
+      provider,
+      operation: "details",
+      code: isMediaError(error) ? error.code : "PROVIDER_BAD_RESPONSE",
+      canonicalKey: `${provider}:${externalId.trim()}`,
+      durationMs: Date.now() - startedAt,
+    });
+
+    throw error;
+  }
 }

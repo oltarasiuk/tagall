@@ -1,6 +1,7 @@
 import { logger } from "~/lib/logger";
 import { isMediaError } from "../errors/media.error";
 import { providerRegistry, type ProviderRegistryType } from "../providers";
+import { logMediaOperation } from "./media-telemetry.service";
 import type {
   MediaKindType,
   ProviderNameType,
@@ -57,6 +58,8 @@ export async function searchMedia(
     ),
   );
 
+  const startedAt = Date.now();
+
   const settled = await Promise.allSettled(
     adapters.map((adapter) =>
       adapter.search({ query, limit: perProviderLimit, mediaKind }),
@@ -68,8 +71,15 @@ export async function searchMedia(
 
   settled.forEach((outcome, index) => {
     const adapter = adapters[index]!;
+    const durationMs = Date.now() - startedAt;
 
     if (outcome.status === "fulfilled") {
+      logMediaOperation({
+        provider: adapter.name,
+        operation: "search",
+        resultCount: outcome.value.length,
+        durationMs,
+      });
       results.push(...outcome.value);
       return;
     }
@@ -78,7 +88,12 @@ export async function searchMedia(
     const code = isMediaError(error) ? error.code : "PROVIDER_BAD_RESPONSE";
     const message = error instanceof Error ? error.message : String(error);
 
-    logger.error(`[media] ${adapter.name} search failed: ${code}`, message);
+    logMediaOperation({
+      provider: adapter.name,
+      operation: "search",
+      code,
+      durationMs,
+    });
     providerErrors.push({ provider: adapter.name, code, message });
   });
 
