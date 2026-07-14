@@ -23,6 +23,8 @@ export type SearchResultType = {
   suggestedCollectionName?: string | null;
   /** Rating/score for sorting, 0-10 scale (TMDB vote_average, Anilist averageScore/10). */
   rating?: number | null;
+  ratingVotes?: number | null;
+  ratingSource?: string | null;
   /** Lower = more relevant; used when sorting items with no rating (e.g. Anilist SEARCH_MATCH order). */
   relevanceRank?: number | null;
   creators?: string[];

@@ -49,6 +49,8 @@ export function toLegacySearchResult(
     suggestedCollectionId: collection?.id ?? null,
     suggestedCollectionName: collection?.name ?? null,
     rating: result.rating?.normalized10 ?? null,
+    ratingVotes: result.rating?.votes ?? null,
+    ratingSource: result.rating?.source ?? null,
     relevanceRank: result.relevanceRank,
     creators: result.authorsOrCreators,
     originalTitle: result.originalTitle,

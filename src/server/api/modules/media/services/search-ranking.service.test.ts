@@ -57,4 +57,22 @@ describe("rankSearchResults", () => {
 
     expect(ranked.map((item) => item.externalId)).toEqual(["a", "b"]);
   });
+
+  it("prefers a reliable quality score over a 10/10 score from three votes", () => {
+    const ranked = rankSearchResults(
+      [
+        result({
+          externalId: "decoy",
+          rating: { source: "openlibrary", value: 5, scale: 5, normalized10: 10, votes: 3, kind: "user" },
+        }),
+        result({
+          externalId: "reliable",
+          rating: { source: "openlibrary", value: 4.5, scale: 5, normalized10: 9, votes: 10_000, kind: "user" },
+        }),
+      ],
+      "Dune",
+    );
+
+    expect(ranked.map((item) => item.externalId)).toEqual(["reliable", "decoy"]);
+  });
 });

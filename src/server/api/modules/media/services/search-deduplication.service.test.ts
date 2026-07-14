@@ -36,7 +36,7 @@ const result = (
 });
 
 describe("dedupeSearchResults", () => {
-  it("merges two providers that share an ISBN", () => {
+  it("does not treat a shared ISBN as work identity", () => {
     const merged = dedupeSearchResults([
       result("openlibrary", "OL893415W", {
         isbns: ["0-441-01359-7"],
@@ -46,16 +46,12 @@ describe("dedupeSearchResults", () => {
       result("hardcover", "12345", { isbns: ["9780441013593"] }),
     ]);
 
-    // A shared, checksum-valid ISBN is a fact: it merges even when the titles
-    // and authors disagree.
-    expect(merged).toHaveLength(1);
-    expect(merged[0]?.identifiers).toEqual([
-      { provider: "openlibrary", externalId: "OL893415W" },
-      { provider: "hardcover", externalId: "12345" },
-    ]);
+    // ISBN names an edition. It must not join an adaptation or a bad provider
+    // record with a different work.
+    expect(merged).toHaveLength(2);
   });
 
-  it("merges on title, primary creator and year when no identifier is shared", () => {
+  it("merges on title and primary creator despite different publication years", () => {
     const merged = dedupeSearchResults([
       result("openlibrary", "OL893415W"),
       result("hardcover", "12345", { year: 1966 }),
@@ -138,6 +134,29 @@ describe("dedupeSearchResults", () => {
     ]);
 
     expect(merged).toHaveLength(2);
+  });
+
+  it("keeps a graphic adaptation separate from the prose work", () => {
+    const merged = dedupeSearchResults([
+      result("openlibrary", "OL1984W", { title: "1984" }),
+      result("hardcover", "1984-graphic", {
+        title: "1984: The Graphic Novel",
+        workSubtype: "graphic novel",
+      }),
+    ]);
+
+    expect(merged).toHaveLength(2);
+  });
+
+  it("does not let a missing creator bridge two conflicting creators", () => {
+    const merged = dedupeSearchResults([
+      result("openlibrary", "OL-orwell", { title: "1984", authorsOrCreators: ["George Orwell"] }),
+      result("hardcover", "unknown", { title: "1984", authorsOrCreators: [] }),
+      result("hardcover", "other", { title: "1984", authorsOrCreators: ["Somebody Else"] }),
+    ]);
+
+    expect(merged).toHaveLength(2);
+    expect(merged.some((entry) => entry.authorsOrCreators[0] === "Somebody Else")).toBe(true);
   });
 
   it("does not merge a book with a manga of the same name", () => {

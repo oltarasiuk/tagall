@@ -58,9 +58,9 @@ describe("isWantedBookResult", () => {
     ).toBe(true);
   });
 
-  it("keeps graphic novels found from the Book tab: they are routed on add", () => {
+  it("does not leak graphic novels into the Book tab", () => {
     expect(
       isWantedBookResult({ mediaKind: "comic", title: "Watchmen" }, "book"),
-    ).toBe(true);
+    ).toBe(false);
   });
 });

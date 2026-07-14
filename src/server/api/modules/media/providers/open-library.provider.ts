@@ -19,7 +19,10 @@ import type {
   ProviderSearchResultType,
 } from "../types";
 import { classifyBookKind } from "../utils/classify-book-kind.util";
-import { isWantedBookResult } from "../utils/filter-book-results.util";
+import {
+  isWantedBookResult,
+  matchesBookTitle,
+} from "../utils/filter-book-results.util";
 import { normalizeRating } from "../utils/normalize-rating.util";
 
 /**
@@ -282,7 +285,9 @@ export const openLibraryProvider: MediaProviderAdapterType = {
         url: `${OPEN_LIBRARY_URL}/search.json`,
         headers: headers(),
         params: {
-          q: input.query,
+          // `q` also searches descriptions, subjects and years. A work search
+          // must be title-only, including numeric titles such as "1984".
+          title: input.query,
           limit: input.limit,
           language: "eng",
           fields: SEARCH_FIELDS,
@@ -301,7 +306,9 @@ export const openLibraryProvider: MediaProviderAdapterType = {
 
       const result = toSearchResult(parsed.data, index);
 
-      return result && isWantedBookResult(result, input.mediaKind)
+      return result &&
+        matchesBookTitle(result, input.query) &&
+        isWantedBookResult(result, input.mediaKind)
         ? [result]
         : [];
     });

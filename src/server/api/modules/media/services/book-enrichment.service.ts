@@ -7,10 +7,9 @@ import type {
 } from "../types";
 import {
   hasConflictingVolume,
-  isCompatibleYear,
   isSamePrimaryCreator,
-  isSameTitle,
 } from "../utils/similarity.util";
+import { normalizeTitle, normalizeTitleLoose } from "../utils/normalize-title.util";
 
 /**
  * A merged search card promises one item carrying both providers' identifiers,
@@ -48,9 +47,14 @@ const findMatch = (
   return (
     candidates.find(
       (candidate) =>
-        isSameTitle(details.title, candidate.title) &&
+        [candidate.title, candidate.originalTitle, ...(candidate.alternateTitles ?? [])]
+          .filter((title): title is string => Boolean(title))
+          .some((title) => {
+            const a = normalizeTitle(details.title);
+            const b = normalizeTitle(title);
+            return a === b || normalizeTitleLoose(a) === normalizeTitleLoose(b);
+          }) &&
         isSamePrimaryCreator(creators, candidate.authorsOrCreators) &&
-        isCompatibleYear(details.year, candidate.year) &&
         !hasConflictingVolume(details.title, candidate.title),
     ) ?? null
   );
@@ -93,8 +97,9 @@ export async function enrichBookDetails(props: {
     return details;
   }
 
-  const creators = toStringArray(details.fields.people);
-  const query = [details.title, creators[0]].filter(Boolean).join(" ");
+  // Providers receive a title-only query. Author text is used only locally to
+  // verify a candidate, never as a broad search term.
+  const query = details.title;
 
   let candidates: ProviderSearchResultType[];
 

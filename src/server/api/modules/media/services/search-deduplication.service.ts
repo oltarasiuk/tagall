@@ -9,20 +9,19 @@ import type {
 import { normalizeIsbns } from "../utils/normalize-isbn.util";
 import {
   hasConflictingVolume,
-  isCompatibleYear,
   isSamePrimaryCreator,
-  isSameTitle,
 } from "../utils/similarity.util";
+import { normalizeTitle, normalizeTitleLoose } from "../utils/normalize-title.util";
 
 /**
  * Two providers describing one work must reach the UI as one card and the
  * database as one item with several identifiers. Doing that in React would only
  * hide the duplicate; the add flow would still create two items.
  *
- * Merging happens in two passes. Hard matches (a shared identifier, a shared
- * ISBN) are facts and merge unconditionally. Heuristics only run inside one
- * media kind and demand agreement on title, primary creator and year — a wrong
- * merge loses a work, so the bar is exact matches, never fuzzy distance.
+ * ISBN is edition-level metadata, never work identity. Book/comic weak matches
+ * require title + creator compatibility and are checked against every member
+ * of a group (rather than transitive Union-Find), preventing one incomplete
+ * record from gluing unrelated works together.
  */
 
 const MAX_MERGED_GENRES = 10;
@@ -83,14 +82,39 @@ const hardKeys = (result: ProviderSearchResultType): string[] => [
   ...result.identifiers.map(
     (identifier) => `${identifier.provider}:${identifier.externalId}`,
   ),
-  ...normalizeIsbns(result.isbns).map((isbn) => `isbn:${isbn}`),
 ];
+
+const isBookOrComic = (kind: MediaKindType): boolean =>
+  kind === "book" || kind === "comic";
+
+const titleKeys = (result: ProviderSearchResultType): string[] =>
+  [result.title, result.originalTitle, ...(result.alternateTitles ?? [])]
+    .filter((value): value is string => Boolean(value))
+    .flatMap((value) => [normalizeTitle(value), normalizeTitleLoose(value)])
+    .filter(Boolean);
+
+const sameWorkTitle = (
+  a: ProviderSearchResultType,
+  b: ProviderSearchResultType,
+): boolean => titleKeys(a).some((key) => titleKeys(b).includes(key));
+
+const qualifierKey = (result: ProviderSearchResultType): string =>
+  normalizeTitle(result.workSubtype);
+
+const hasConflictingQualifier = (
+  a: ProviderSearchResultType,
+  b: ProviderSearchResultType,
+): boolean => {
+  const aQualifier = qualifierKey(a);
+  const bQualifier = qualifierKey(b);
+  return Boolean(aQualifier && bQualifier && aQualifier !== bQualifier);
+};
 
 const isHeuristicMatch = (
   a: ProviderSearchResultType,
   b: ProviderSearchResultType,
 ): boolean => {
-  if (a.provider === b.provider || a.mediaKind !== b.mediaKind) {
+  if (a.mediaKind !== b.mediaKind) {
     return false;
   }
 
@@ -98,12 +122,24 @@ const isHeuristicMatch = (
     return false;
   }
 
-  return (
-    isSameTitle(a.title, b.title) &&
-    isSamePrimaryCreator(a.authorsOrCreators, b.authorsOrCreators) &&
-    isCompatibleYear(a.year, b.year) &&
-    !hasConflictingVolume(a.title, b.title)
-  );
+  if (
+    !sameWorkTitle(a, b) ||
+    hasConflictingVolume(a.title, b.title) ||
+    hasConflictingQualifier(a, b)
+  ) {
+    return false;
+  }
+
+  const aCreator = a.authorsOrCreators[0];
+  const bCreator = b.authorsOrCreators[0];
+  // Two known, different creators are an absolute boundary.
+  if (aCreator && bCreator) {
+    return isSamePrimaryCreator(a.authorsOrCreators, b.authorsOrCreators);
+  }
+
+  // Incomplete metadata can only attach to an unambiguous title group. The
+  // group-level check below prevents it from becoming a transitive bridge.
+  return isBookOrComic(a.mediaKind);
 };
 
 const uniqueBy = <T>(values: T[], key: (value: T) => string): T[] => {
@@ -247,14 +283,29 @@ export function dedupeSearchResults(
     }
   });
 
-  for (let i = 0; i < results.length; i++) {
-    for (let j = i + 1; j < results.length; j++) {
-      if (
-        unionFind.find(i) !== unionFind.find(j) &&
-        isHeuristicMatch(results[i]!, results[j]!)
-      ) {
-        unionFind.union(i, j);
-      }
+  // Never use transitive unioning for weak matches. A candidate must be
+  // compatible with *every* member in the target group.
+  const weakGroups: number[][] = [];
+  results.forEach((candidate, index) => {
+    const root = unionFind.find(index);
+    const hardGroup = results
+      .map((_, memberIndex) => memberIndex)
+      .filter((memberIndex) => unionFind.find(memberIndex) === root);
+    const existing = weakGroups.find((group) => group.includes(root));
+    if (existing || hardGroup.length > 1) return;
+
+    const compatibleGroup = weakGroups.find((group) =>
+      group.every((memberIndex) =>
+        isHeuristicMatch(candidate, results[memberIndex]!),
+      ),
+    );
+    if (compatibleGroup) compatibleGroup.push(index);
+    else weakGroups.push([index]);
+  });
+
+  for (const group of weakGroups) {
+    for (let index = 1; index < group.length; index++) {
+      unionFind.union(group[0]!, group[index]!);
     }
   }
 

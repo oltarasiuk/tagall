@@ -173,10 +173,26 @@ const AddSearchResultItem = (props: Props) => {
             </span>
           )}
           {searchResult.rating != null && (
-            <ItemRatingBadge
-              rate={searchResult.rating}
-              className="sm:text-md text-base"
-            />
+            <div
+              className="flex items-center gap-1"
+              title={
+                searchResult.ratingSource
+                  ? `${searchResult.ratingSource}${searchResult.ratingVotes != null ? ` · ${searchResult.ratingVotes.toLocaleString()} votes` : ""}`
+                  : undefined
+              }
+            >
+              <ItemRatingBadge
+                rate={searchResult.rating}
+                className="sm:text-md text-base"
+              />
+              {searchResult.ratingVotes != null && (
+                <span className="text-xs text-muted-foreground">
+                  · {searchResult.ratingVotes >= 1000
+                    ? `${(searchResult.ratingVotes / 1000).toFixed(1).replace(/\.0$/, "")}k`
+                    : searchResult.ratingVotes} votes
+                </span>
+              )}
+            </div>
           )}
           {searchResult.importable === false && (
             <span className="text-xs text-destructive">

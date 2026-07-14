@@ -51,6 +51,10 @@ export type ProviderSearchResultType = {
   mediaKind: MediaKindType;
   title: string;
   originalTitle: string | null;
+  /** Provider aliases participate in title-only search and work matching. */
+  alternateTitles?: string[];
+  /** A semantic discriminator such as "graphic novel" or "omnibus". */
+  workSubtype?: string | null;
   originalLanguage: string | null;
   year: number | null;
   description: string | null;

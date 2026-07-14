@@ -18,7 +18,10 @@ import type {
   ProviderSearchResultType,
 } from "../types";
 import { classifyBookKind } from "../utils/classify-book-kind.util";
-import { isWantedBookResult } from "../utils/filter-book-results.util";
+import {
+  isWantedBookResult,
+  matchesBookTitle,
+} from "../utils/filter-book-results.util";
 import { normalizeRating } from "../utils/normalize-rating.util";
 
 /**
@@ -246,7 +249,9 @@ export const hardcoverProvider: MediaProviderAdapterType = {
 
       const searchResult = toSearchResult(result.data, index);
 
-      return searchResult && isWantedBookResult(searchResult, input.mediaKind)
+      return searchResult &&
+        matchesBookTitle(searchResult, input.query) &&
+        isWantedBookResult(searchResult, input.mediaKind)
         ? [searchResult]
         : [];
     });

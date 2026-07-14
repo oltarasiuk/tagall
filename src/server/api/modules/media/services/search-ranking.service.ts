@@ -1,5 +1,5 @@
 import type { ProviderSearchResultType } from "../types";
-import { normalizeTitle } from "../utils/normalize-title.util";
+import { normalizeTitle, normalizeTitleLoose } from "../utils/normalize-title.util";
 
 const meaningfulTokens = (value: string): string[] =>
   normalizeTitle(value)
@@ -8,18 +8,30 @@ const meaningfulTokens = (value: string): string[] =>
 
 const titleTier = (result: ProviderSearchResultType, query: string): number => {
   const normalizedQuery = normalizeTitle(query);
-  const titles = [result.title, result.originalTitle].map(normalizeTitle);
+  const titles = [
+    result.title,
+    result.originalTitle,
+    ...(result.alternateTitles ?? []),
+  ]
+    .filter((title): title is string => Boolean(title))
+    .map(normalizeTitle);
 
   if (titles.includes(normalizedQuery)) return 1;
-  if (titles.some((title) => title.startsWith(normalizedQuery))) return 2;
+  if (
+    titles.some(
+      (title) => normalizeTitleLoose(title) === normalizeTitleLoose(normalizedQuery),
+    )
+  )
+    return 2;
+  if (titles.some((title) => title.startsWith(normalizedQuery))) return 3;
 
   const tokens = meaningfulTokens(query);
   if (
     tokens.length &&
     titles.some((title) => tokens.every((token) => title.includes(token)))
   )
-    return 3;
-  return 4;
+    return 4;
+  return 5;
 };
 
 const normalized = (value: number, min: number, max: number): number =>
