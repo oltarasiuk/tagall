@@ -20,11 +20,15 @@ const MANGA_STATUSES: Record<string, string> = {
   HIATUS: "On Hiatus",
 };
 
+/** The collection the provider suggested names the type. An unknown result is
+ * labelled as such — calling it a Manga (the old fallback) mislabels every
+ * book, comic and game. */
 function getTypeLabel(searchResult: SearchResultType): string {
-  if (searchResult.suggestedCollectionName) return searchResult.suggestedCollectionName;
+  if (searchResult.suggestedCollectionName)
+    return searchResult.suggestedCollectionName;
   if (searchResult.mediaType === "movie") return "Film";
   if (searchResult.mediaType === "tv") return "Serie";
-  return "Manga";
+  return "Unknown";
 }
 
 function parseKeywords(keywords: string[], isManga: boolean): string[] {

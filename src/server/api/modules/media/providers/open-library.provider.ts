@@ -18,6 +18,8 @@ import type {
   ProviderSearchInputType,
   ProviderSearchResultType,
 } from "../types";
+import { classifyBookKind } from "../utils/classify-book-kind.util";
+import { isWantedBookResult } from "../utils/filter-book-results.util";
 import { normalizeRating } from "../utils/normalize-rating.util";
 
 /**
@@ -183,7 +185,7 @@ const toSearchResult = (
   return {
     provider: "openlibrary",
     externalId: workId,
-    mediaKind: "book",
+    mediaKind: classifyBookKind(doc.subject ?? []),
     title,
     originalTitle: null,
     originalLanguage: doc.language?.[0] ?? null,
@@ -263,7 +265,7 @@ const fetchRating = async (workId: string) => {
 
 export const openLibraryProvider: MediaProviderAdapterType = {
   name: "openlibrary",
-  supportedKinds: ["book"],
+  supportedKinds: ["book", "comic"],
   // Open, key-less API: available as long as the network is.
   enabled: true,
 
@@ -299,7 +301,9 @@ export const openLibraryProvider: MediaProviderAdapterType = {
 
       const result = toSearchResult(parsed.data, index);
 
-      return result ? [result] : [];
+      return result && isWantedBookResult(result, input.mediaKind)
+        ? [result]
+        : [];
     });
   },
 
@@ -342,7 +346,7 @@ export const openLibraryProvider: MediaProviderAdapterType = {
     const { genres, keywords } = cleanSubjects(work.subjects);
 
     return {
-      mediaKind: "book",
+      mediaKind: classifyBookKind(work.subjects ?? []),
       title: work.title.trim(),
       originalTitle: null,
       originalLanguage: null,

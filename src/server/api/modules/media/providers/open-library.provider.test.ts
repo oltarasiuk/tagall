@@ -1,6 +1,7 @@
 import type { AxiosRequestConfig } from "axios";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import searchDune from "../__fixtures__/open-library-search-dune.json";
+import searchWatchmen from "../__fixtures__/open-library-search-watchmen.json";
 import workDune from "../__fixtures__/open-library-work-dune.json";
 
 const providerRequest = vi.fn();
@@ -131,6 +132,33 @@ describe("openLibraryProvider.search", () => {
     );
     // No cover_i: the result still shows up, it just has nothing to persist.
     expect(messiah?.imageCandidates).toEqual([]);
+  });
+
+  it("routes a graphic novel to Comic and drops single issues", async () => {
+    respond({ "/search.json": searchWatchmen });
+
+    const results = await openLibraryProvider.search({
+      query: "watchmen",
+      limit: 10,
+      mediaKind: "comic",
+    });
+
+    // The collected edition stays; "Watchmen #4" is an issue, not an item.
+    expect(results).toHaveLength(1);
+    expect(results[0]?.title).toBe("Watchmen");
+    expect(results[0]?.mediaKind).toBe("comic");
+  });
+
+  it("keeps prose novels out of the Comic tab", async () => {
+    respond({ "/search.json": searchDune });
+
+    const results = await openLibraryProvider.search({
+      query: "dune",
+      limit: 10,
+      mediaKind: "comic",
+    });
+
+    expect(results).toEqual([]);
   });
 
   it("skips a malformed doc instead of failing the whole search", async () => {

@@ -2,10 +2,7 @@
 import { useState } from "react";
 import { AddSearchResultItem } from "./add-search-result-item";
 import { AddItemModal } from "./add-item-modal";
-import type {
-  SearchResultType,
-  SearchMediaFilterType,
-} from "../../../../server/api/modules/parse/types";
+import type { SearchResultType } from "../../../../server/api/modules/parse/types";
 import Link from "next/link";
 import { CollectionsTabs, Container, Loading, ScrollButton, Search } from "../../shared";
 import {
@@ -17,7 +14,6 @@ import {
 import { api } from "../../../../trpc/react";
 import type { z } from "zod";
 import { SearchInputSchema } from "../../../../server/api/modules/parse/schemas";
-import type { CollectionType } from "../../../../server/api/modules/collection/types";
 
 export const AddParamsSchema = SearchInputSchema.pick({
   query: true,
@@ -26,19 +22,6 @@ export const AddParamsSchema = SearchInputSchema.pick({
 export type AddParamsType = z.infer<typeof AddParamsSchema>;
 
 const SEARCH_ALL_COLLECTION_ID = "all" as const;
-
-const MEDIA_FILTER_OPTIONS: SearchMediaFilterType[] = ["Film", "Serie", "Manga"];
-
-const MEDIA_FILTER_COLLECTIONS: CollectionType[] = MEDIA_FILTER_OPTIONS.map(
-  (type) => ({
-    id: type,
-    name: type,
-    slug: type.toLowerCase(),
-    priority: 0,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  }),
-);
 
 function AddContainer() {
   const [collections] = api.collection.getAll.useSuspenseQuery();
@@ -75,11 +58,14 @@ function AddContainer() {
     baseSubmit();
   };
 
+  // Tabs come from the collections themselves, so a new one (Book, Comic, ...)
+  // is filterable the moment it is seeded. Results carry the collection the
+  // provider suggested, so the filter compares ids, not display names.
   const filteredResults = [
     ...(selectedMediaIds.length === 0
       ? searchResults
       : searchResults.filter(
-          (r) => (r.suggestedCollectionName ?? "Film") === selectedMediaIds[0],
+          (result) => result.suggestedCollectionId === selectedMediaIds[0],
         )),
   ]
     .filter((r) => !!r.image)
@@ -99,7 +85,7 @@ function AddContainer() {
 
       {hasResults && !isLoading && (
         <CollectionsTabs
-          collections={MEDIA_FILTER_COLLECTIONS}
+          collections={collections}
           selectedCollectionsIds={selectedMediaIds}
           setSelectedCollectionsIds={setSelectedMediaIds}
           isMany={false}

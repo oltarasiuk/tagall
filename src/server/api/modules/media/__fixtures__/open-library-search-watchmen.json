@@ -1,0 +1,28 @@
+{
+  "docs": [
+    {
+      "key": "/works/OL1854888W",
+      "title": "Watchmen",
+      "author_name": ["Alan Moore", "Dave Gibbons"],
+      "first_publish_year": 1986,
+      "cover_i": 8231990,
+      "isbn": ["9780930289232"],
+      "subject": [
+        "Comic books, strips, etc.",
+        "Graphic novels",
+        "Superheroes",
+        "Fiction"
+      ],
+      "ratings_average": 4.5,
+      "ratings_count": 320,
+      "language": ["eng"]
+    },
+    {
+      "key": "/works/OL9999999W",
+      "title": "Watchmen #4",
+      "author_name": ["Alan Moore"],
+      "first_publish_year": 1986,
+      "subject": ["Comic books, strips, etc."]
+    }
+  ]
+}

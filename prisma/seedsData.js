@@ -24,6 +24,12 @@ export const seedsData = {
       slug: "manga",
       priority: 4,
     },
+    {
+      id: "cmi75xx8zbqwcuglg4iivite7",
+      name: "Comic",
+      slug: "comic",
+      priority: 5,
+    },
   ],
   fieldGroups: [
     {
@@ -36,6 +42,7 @@ export const seedsData = {
         "cm3a9sw1v000gi1s7appi2tju",
         "cm3bnlve100000ks784yufzt9",
         "cm3bnlxhu00020ks7hyps1g0a",
+        "cmi75xx8zbqwcuglg4iivite7",
       ],
     },
     {
@@ -55,6 +62,7 @@ export const seedsData = {
         "cm3a9sw1v000gi1s7appi2tju",
         "cm3bnlve100000ks784yufzt9",
         "cm3bnlxhu00020ks7hyps1g0a",
+        "cmi75xx8zbqwcuglg4iivite7",
       ],
     },
 
@@ -75,6 +83,7 @@ export const seedsData = {
         "cm3a9sw1v000gi1s7appi2tju",
         "cm3bnlve100000ks784yufzt9",
         "cm3bnlxhu00020ks7hyps1g0a",
+        "cmi75xx8zbqwcuglg4iivite7",
       ],
     },
     {
@@ -103,7 +112,7 @@ export const seedsData = {
       name: "series",
       priority: 10,
       isFiltering: true,
-      collections: ["cm3bnlxhu00020ks7hyps1g0a"],
+      collections: ["cm3bnlxhu00020ks7hyps1g0a", "cmi75xx8zbqwcuglg4iivite7"],
     },
   ],
 };

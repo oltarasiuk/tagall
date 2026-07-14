@@ -9,4 +9,3 @@ export * from "./anilist-details-result.type";
 export * from "./imdb-search-input.type";
 export * from "./parse-regrex-result.type";
 export * from "./parse-regrex-input.type";
-export * from "./search-media-filter.type";

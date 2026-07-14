@@ -17,6 +17,8 @@ import type {
   ProviderSearchInputType,
   ProviderSearchResultType,
 } from "../types";
+import { classifyBookKind } from "../utils/classify-book-kind.util";
+import { isWantedBookResult } from "../utils/filter-book-results.util";
 import { normalizeRating } from "../utils/normalize-rating.util";
 
 /**
@@ -163,7 +165,7 @@ const toSearchResult = (
   return {
     provider: "hardcover",
     externalId: id,
-    mediaKind: "book",
+    mediaKind: classifyBookKind([...genres, ...keywords]),
     title,
     originalTitle: null,
     originalLanguage: null,
@@ -192,8 +194,11 @@ const toDetails = (book: HardcoverBookType): NormalizedItemDetailsType => {
     .map((contribution) => contribution.author?.name?.trim())
     .filter((name): name is string => !!name);
 
+  const genres = tagsOf(book.cached_tags, "Genre").slice(0, MAX_GENRES);
+  const keywords = tagsOf(book.cached_tags, "Tag").slice(0, MAX_KEYWORDS);
+
   return {
-    mediaKind: "book",
+    mediaKind: classifyBookKind([...genres, ...keywords]),
     title: book.title.trim(),
     originalTitle: null,
     originalLanguage: null,
@@ -204,8 +209,8 @@ const toDetails = (book: HardcoverBookType): NormalizedItemDetailsType => {
     imageCandidates: toImageCandidates(book.image?.url),
     rating: toRating(book),
     fields: {
-      genres: tagsOf(book.cached_tags, "Genre").slice(0, MAX_GENRES),
-      keywords: tagsOf(book.cached_tags, "Tag").slice(0, MAX_KEYWORDS),
+      genres,
+      keywords,
       people,
       series: series?.series?.name ?? null,
     },
@@ -214,7 +219,7 @@ const toDetails = (book: HardcoverBookType): NormalizedItemDetailsType => {
 
 export const hardcoverProvider: MediaProviderAdapterType = {
   name: "hardcover",
-  supportedKinds: ["book"],
+  supportedKinds: ["book", "comic"],
 
   get enabled() {
     return isEnabled();
@@ -241,7 +246,9 @@ export const hardcoverProvider: MediaProviderAdapterType = {
 
       const searchResult = toSearchResult(result.data, index);
 
-      return searchResult ? [searchResult] : [];
+      return searchResult && isWantedBookResult(searchResult, input.mediaKind)
+        ? [searchResult]
+        : [];
     });
   },
 
