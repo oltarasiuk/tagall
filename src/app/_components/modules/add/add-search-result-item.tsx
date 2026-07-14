@@ -12,14 +12,6 @@ type Props = {
   disableHover?: boolean;
 };
 
-const MANGA_STATUSES: Record<string, string> = {
-  FINISHED: "Finished",
-  RELEASING: "Ongoing",
-  NOT_YET_RELEASED: "Coming Soon",
-  CANCELLED: "Cancelled",
-  HIATUS: "On Hiatus",
-};
-
 /** The collection the provider suggested names the type. An unknown result is
  * labelled as such — calling it a Manga (the old fallback) mislabels every
  * book, comic and game. */
@@ -31,28 +23,9 @@ function getTypeLabel(searchResult: SearchResultType): string {
   return "Unknown";
 }
 
-function parseKeywords(keywords: string[], isManga: boolean): string[] {
-  const meta: string[] = [];
-  for (const kw of keywords) {
-    if (kw.endsWith(" imdb") || kw.endsWith(" tmdb")) continue;
-    if (isManga) {
-      if (/\d+ volumes?/i.test(kw) || kw in MANGA_STATUSES) {
-        meta.push(kw in MANGA_STATUSES ? (MANGA_STATUSES[kw] ?? kw) : kw);
-      }
-    } else {
-      meta.push(kw);
-    }
-  }
-  return meta;
-}
-
 const AddSearchResultItem = (props: Props) => {
   const { searchResult, setSelectedItem, disableHover = false } = props;
   const typeLabel = getTypeLabel(searchResult);
-  const isManga = typeLabel === "Manga";
-  // Book providers may return dozens of subjects. Search cards are compact,
-  // so show only a small, bounded preview instead of letting labels overflow.
-  const meta = parseKeywords(searchResult.keywords, isManga).slice(0, 2);
 
   return (
     <CardContainer
@@ -64,11 +37,7 @@ const AddSearchResultItem = (props: Props) => {
           "hover:scale-105 hover:border-primary/50 hover:shadow-md",
       )}
       onClick={() => {
-        if (
-          !disableHover &&
-          !searchResult.id &&
-          searchResult.importable !== false
-        )
+        if (!disableHover && !searchResult.id)
           setSelectedItem(() => searchResult);
       }}
     >
@@ -107,9 +76,7 @@ const AddSearchResultItem = (props: Props) => {
             unoptimized
           />
         ) : (
-          <div className="flex h-full w-full items-center justify-center rounded-l-lg bg-muted p-3 text-center text-xs text-muted-foreground">
-            Cover required before adding
-          </div>
+          <div className="h-full w-full rounded-l-lg bg-muted" />
         )}
       </div>
 
@@ -157,16 +124,6 @@ const AddSearchResultItem = (props: Props) => {
 
         {/* Rating + year row */}
         <div className="flex min-w-0 items-center justify-end gap-3">
-          {meta.map((meta: string) => (
-            <p
-              key={meta}
-              className="sm:text-md max-w-24 truncate text-base text-muted-foreground"
-              title={meta}
-            >
-              {meta}
-            </p>
-          ))}
-
           {searchResult.year != null && (
             <span className="sm:text-md text-base font-semibold text-muted-foreground">
               {searchResult.year}
@@ -193,11 +150,6 @@ const AddSearchResultItem = (props: Props) => {
                 </span>
               )}
             </div>
-          )}
-          {searchResult.importable === false && (
-            <span className="text-xs text-destructive">
-              {searchResult.importBlockedReason}
-            </span>
           )}
         </div>
       </div>

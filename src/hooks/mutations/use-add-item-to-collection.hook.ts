@@ -23,6 +23,7 @@ type formDataType = z.infer<typeof formSchema>;
 
 type Props = {
   selectedItem: SearchResultType | null;
+  selectedImageFile: File | null;
   selectedCollectionId: string;
   setSelectedItem: Dispatch<SetStateAction<SearchResultType | null>>;
   setSearchResults: Dispatch<SetStateAction<SearchResultType[]>>;
@@ -32,6 +33,7 @@ export const useAddItemToCollection = (props: Props) => {
   const {
     selectedCollectionId,
     selectedItem,
+    selectedImageFile,
     setSelectedItem,
     setSearchResults,
   } = props;
@@ -51,6 +53,14 @@ export const useAddItemToCollection = (props: Props) => {
   });
 
   const utils = api.useUtils();
+
+  const convertToBase64 = (file: File): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = () => reject(new Error("Failed to read cover image"));
+    });
 
   const submit = async (data: formDataType) => {
     if (!selectedItem) return;
@@ -77,7 +87,13 @@ export const useAddItemToCollection = (props: Props) => {
       provider: selectedItem.provider,
       externalId: selectedItem.externalId,
       mediaKind: selectedItem.mediaKind,
-      selectedImageUrl: (selectedItem.image ?? selectedImageUrl) || undefined,
+      selectedImageUrl:
+        selectedImageUrl ||
+        (selectedItem.importable !== false ? selectedItem.image : undefined) ||
+        undefined,
+      selectedImageBase64: selectedImageFile
+        ? await convertToBase64(selectedImageFile)
+        : undefined,
       ...((commentTitle || commentDescription) && {
         comment: {
           title: commentTitle,

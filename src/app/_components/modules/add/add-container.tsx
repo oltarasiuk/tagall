@@ -64,6 +64,7 @@ function AddContainer() {
   const submit = () => {
     setLimit(10);
     setHasSubmitted(true);
+    if (limit === 10) baseSubmit();
   };
 
   useEffect(() => {

@@ -24,6 +24,7 @@ import type { SearchResultType } from "../../../../server/api/modules/parse/type
 import type { TagType } from "../../../../server/api/modules/tag/types";
 import { useAddItemToCollection } from "../../../../hooks";
 import { AddSearchResultItem } from "./add-search-result-item";
+import { useState } from "react";
 
 type Props = {
   open: boolean;
@@ -36,13 +37,23 @@ type Props = {
 
 const AddItemModal = (props: Props) => {
   const { selectedItem, open, setSelectedItem, tags } = props;
-  const { form, submit } = useAddItemToCollection(props);
+  const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
+  const { form, submit } = useAddItemToCollection({
+    ...props,
+    selectedImageFile,
+  });
 
   const status = form.watch("status");
   const rating = form.watch("rate");
   const tagsIds = form.watch("tagsIds");
   const selectedImageUrl = form.watch("selectedImageUrl");
-  const hasCover = Boolean(selectedItem.image ?? selectedImageUrl);
+  const needsCoverInput =
+    !selectedItem.image || selectedItem.importable === false;
+  const hasCover = Boolean(
+    (!needsCoverInput && selectedItem.image) ||
+    selectedImageUrl ||
+    selectedImageFile,
+  );
 
   // no-op: card is not clickable inside the modal
   const noop: Dispatch<SetStateAction<SearchResultType | null>> = () =>
@@ -201,30 +212,42 @@ const AddItemModal = (props: Props) => {
                 )}
 
                 {/* Comment title */}
-                {!selectedItem.image && (
-                  <FormField
-                    control={form.control}
-                    name="selectedImageUrl"
-                    render={() => (
-                      <FormItem>
-                        <FormLabel>Cover URL</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="url"
-                            placeholder="https://…"
-                            value={selectedImageUrl ?? ""}
-                            onChange={(event) =>
-                              form.setValue(
-                                "selectedImageUrl",
-                                event.target.value,
-                              )
-                            }
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                {needsCoverInput && (
+                  <>
+                    <FormField
+                      control={form.control}
+                      name="selectedImageUrl"
+                      render={() => (
+                        <FormItem>
+                          <FormLabel>Cover URL</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="url"
+                              placeholder="https://…"
+                              value={selectedImageUrl ?? ""}
+                              onChange={(event) =>
+                                form.setValue(
+                                  "selectedImageUrl",
+                                  event.target.value,
+                                )
+                              }
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormItem>
+                      <FormLabel>Or upload a cover</FormLabel>
+                      <Input
+                        type="file"
+                        accept="image/*,.png,.jpg,.jpeg,.gif,.webp"
+                        onChange={(event) =>
+                          setSelectedImageFile(event.target.files?.[0] ?? null)
+                        }
+                      />
+                    </FormItem>
+                  </>
                 )}
                 <FormField
                   control={form.control}

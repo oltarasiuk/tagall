@@ -118,8 +118,9 @@ async function CreateItem(props: {
   details: NormalizedItemDetailsType;
   collection: { id: string; name: string; slug: string };
   selectedImageUrl?: string;
+  selectedImageBase64?: string;
 }) {
-  const { ctx, provider, externalId, details, collection, selectedImageUrl } = props;
+  const { ctx, provider, externalId, details, collection, selectedImageUrl, selectedImageBase64 } = props;
 
   const startTime = Date.now();
 
@@ -195,27 +196,31 @@ async function CreateItem(props: {
     : null;
   const candidatesToTry = selectedCandidate ? [selectedCandidate] : candidates;
 
-  let image: string | null = null;
+  let image: string | null = selectedImageBase64
+    ? await UploadImageByBase64(collection.name, selectedImageBase64)
+    : null;
   let lastImageError: unknown = null;
 
-  for (const candidate of candidatesToTry) {
-    try {
-      image = await DownloadAndUploadProviderImage({
-        folder: collection.name,
-        canonicalKey: parsedId,
-        mediaKind: details.mediaKind,
-        candidate,
-      });
-      break;
-    } catch (error) {
-      lastImageError = error;
-      logMediaOperation({
-        provider: candidate.source,
-        operation: "image",
-        code: isMediaError(error) ? error.code : "POSTER_DOWNLOAD_FAILED",
-        canonicalKey: parsedId,
-        durationMs: Date.now() - uploadStartTime,
-      });
+  if (!image) {
+    for (const candidate of candidatesToTry) {
+      try {
+        image = await DownloadAndUploadProviderImage({
+          folder: collection.name,
+          canonicalKey: parsedId,
+          mediaKind: details.mediaKind,
+          candidate,
+        });
+        break;
+      } catch (error) {
+        lastImageError = error;
+        logMediaOperation({
+          provider: candidate.source,
+          operation: "image",
+          code: isMediaError(error) ? error.code : "POSTER_DOWNLOAD_FAILED",
+          canonicalKey: parsedId,
+          durationMs: Date.now() - uploadStartTime,
+        });
+      }
     }
   }
 
@@ -632,6 +637,7 @@ export async function AddToCollection(props: {
       details,
       collection,
       selectedImageUrl: input.selectedImageUrl,
+      selectedImageBase64: input.selectedImageBase64,
     });
     logger.debug(`[AddToCollection] Item created successfully: ${item.id} - "${item.title}" (${Date.now() - startTime}ms)`);
   } catch (error) {

@@ -8,6 +8,7 @@ export const AddToCollectionInputSchema = z.object({
   mediaKind: z.enum(MEDIA_KINDS),
   collectionId: z.string().cuid(),
   selectedImageUrl: z.string().url().optional(),
+  selectedImageBase64: z.string().optional(),
   rate: z.number().int().min(0).max(10),
   status: z.nativeEnum(ItemStatus),
   comment: z
