@@ -49,7 +49,9 @@ async function main() {
           priority: fieldGroup.priority,
           isFiltering: fieldGroup.isFiltering,
           collections: {
-            connect: fieldGroup.collections.map((collectionId) => ({
+            // Seeds are the source of truth: `set` also detaches stale
+            // collection relations that a plain `connect` would keep forever.
+            set: fieldGroup.collections.map((collectionId) => ({
               id: collectionId,
             })),
           },
