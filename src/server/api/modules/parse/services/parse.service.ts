@@ -1,54 +1,14 @@
 import type { ContextType } from "../../../../types";
+import {
+  getCollectionSlugForMediaKind,
+  getMediaKindForCollectionSlug,
+} from "../../media/constants/media-kind.const";
+import { searchMedia } from "../../media/services/media-search.service";
+import {
+  toLegacySearchResult,
+  type CollectionRefType,
+} from "../../media/utils/to-legacy-search-result.util";
 import type { SearchInputType, SearchResultType } from "../types";
-import { SearchAnilist } from "./anilist.service";
-import { searchVideoByImdb } from "./imdb-crawlee.service";
-import { searchVideo } from "./tmdb.service";
-import { getSearchSourceBySlug } from "../utils/collection-routing.util";
-
-/** Video search: IMDB results first, then TMDB, deduped by parsedId. */
-async function searchVideoWithImdbFirst(
-  query: string,
-  limit: number,
-): Promise<SearchResultType[]> {
-  const [imdbResults, tmdbResults] = await Promise.all([
-    searchVideoByImdb(query, limit),
-    searchVideo(query, limit),
-  ]);
-
-  console.log("[search] IMDB advanced search results", {
-    query: query.trim(),
-    count: imdbResults.length,
-    ids: imdbResults.map((r) => r.parsedId),
-  });
-
-  const tmdbOnlyResults: SearchResultType[] = [];
-  const seen = new Set(imdbResults.map((r) => r.parsedId));
-  const merged = [...imdbResults];
-  for (const r of tmdbResults) {
-    if (seen.has(r.parsedId)) continue;
-    seen.add(r.parsedId);
-    merged.push(r);
-    tmdbOnlyResults.push(r);
-  }
-
-  console.log("[search] TMDB search results (unique, not in IMDB)", {
-    query: query.trim(),
-    totalFromTmdb: tmdbResults.length,
-    uniqueCount: tmdbOnlyResults.length,
-    ids: tmdbResults.map((r) => r.parsedId),
-    uniqueIds: tmdbOnlyResults.map((r) => r.parsedId),
-  });
-
-  const result = merged.slice(0, limit);
-
-  console.log("[search] Final merged result", {
-    query: query.trim(),
-    count: result.length,
-    ids: result.map((r) => r.parsedId),
-  });
-
-  return result;
-}
 
 export const AddIdToSearchResults = async (props: {
   ctx: ContextType;
@@ -94,83 +54,65 @@ export const AddIdToSearchResults = async (props: {
 export const Search = async (props: {
   ctx: ContextType;
   input: SearchInputType;
-}) => {
+}): Promise<SearchResultType[]> => {
   const { ctx, input } = props;
   const limit = input.limit ?? 10;
 
-  if (input.collectionId === "all") {
-    const collections = await ctx.db.collection.findMany({
-      where: { slug: { in: ["film", "serie", "manga"] } },
-      select: { id: true, name: true, slug: true },
+  let mediaKind: ReturnType<typeof getMediaKindForCollectionSlug> = null;
+
+  if (input.collectionId !== "all") {
+    const collection = await ctx.db.collection.findUnique({
+      where: { id: input.collectionId },
+      select: { slug: true },
     });
-    const collectionBySlug = Object.fromEntries(
-      collections.map((c) => [c.slug, c]),
-    );
-    const filmCollection = collectionBySlug.film;
-    const serieCollection = collectionBySlug.serie;
-    const mangaCollection = collectionBySlug.manga;
-    const perSourceLimit = Math.max(5, Math.ceil(limit / 2));
 
-    const [videoResults, mangaResults] = await Promise.all([
-      searchVideoWithImdbFirst(input.query, perSourceLimit),
-      SearchAnilist(input.query, perSourceLimit),
-    ]);
+    if (!collection) {
+      throw new Error("Collection not found");
+    }
 
-    const videoWithCollection: SearchResultType[] = videoResults.map((r) => {
-      const target = r.mediaType === "movie" ? filmCollection : serieCollection;
-      return {
-        ...r,
-        suggestedCollectionId: target?.id ?? null,
-        suggestedCollectionName:
-          target?.name ?? (r.mediaType === "movie" ? "Film" : "Serie"),
-      };
-    });
-    const mangaWithCollection: SearchResultType[] = mangaResults.map((r) => ({
-      ...r,
-      suggestedCollectionId: mangaCollection?.id ?? null,
-      suggestedCollectionName: mangaCollection?.name ?? "Manga",
-    }));
+    mediaKind = getMediaKindForCollectionSlug(collection.slug);
 
-    const combined = [...videoWithCollection, ...mangaWithCollection];
-    combined.sort((a, b) => {
-      const ra = a.rating ?? -1;
-      const rb = b.rating ?? -1;
-      if (rb !== ra) return rb - ra;
-      const relA = a.relevanceRank ?? 999;
-      const relB = b.relevanceRank ?? 999;
-      if (relA !== relB) return relA - relB;
-      const ya = a.year ?? 0;
-      const yb = b.year ?? 0;
-      return yb - ya;
-    });
-    return combined;
-  }
-
-  const collection = await ctx.db.collection.findUnique({
-    where: { id: input.collectionId },
-  });
-  if (!collection) {
-    throw new Error("Collection not found");
-  }
-
-  let items: SearchResultType[] = [];
-
-  switch (getSearchSourceBySlug(collection.slug)) {
-    case "video":
-      items = (await searchVideoWithImdbFirst(input.query, limit)).map((r) => ({
-        ...r,
-        suggestedCollectionName: collection.name,
-      }));
-      break;
-    case "manga":
-      items = (await SearchAnilist(input.query, limit)).map((r) => ({
-        ...r,
-        suggestedCollectionName: collection.name,
-      }));
-      break;
-    default:
+    if (!mediaKind) {
       throw new Error(`No search provider for collection "${collection.slug}"`);
+    }
   }
 
-  return items;
+  const { results } = await searchMedia({
+    query: input.query,
+    limit,
+    ...(mediaKind && { mediaKind }),
+  });
+
+  const collections = await ctx.db.collection.findMany({
+    select: { id: true, name: true, slug: true },
+  });
+  const collectionBySlug = new Map<string, CollectionRefType>(
+    collections.map((collection) => [collection.slug, collection]),
+  );
+
+  const items = results.map((result) =>
+    toLegacySearchResult(
+      result,
+      collectionBySlug.get(getCollectionSlugForMediaKind(result.mediaKind)) ??
+        null,
+    ),
+  );
+
+  if (mediaKind) {
+    return items;
+  }
+
+  // "All" tab: providers are queried in parallel, so the merged list needs one
+  // deterministic order. Ratings are already normalized to 0-10 here.
+  return items.sort((a, b) => {
+    const ratingA = a.rating ?? -1;
+    const ratingB = b.rating ?? -1;
+    if (ratingB !== ratingA) return ratingB - ratingA;
+
+    const rankA = a.relevanceRank ?? 999;
+    const rankB = b.relevanceRank ?? 999;
+    if (rankA !== rankB) return rankA - rankB;
+
+    return (b.year ?? 0) - (a.year ?? 0);
+  });
 };

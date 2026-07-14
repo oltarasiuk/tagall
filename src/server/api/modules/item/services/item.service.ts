@@ -15,16 +15,21 @@ import type {
   ItemsStatsType,
   GetNearestItemsInputType,
 } from "../types";
-import {
-  getVideoDetailsByImdbId,
-  findByImdbId,
-} from "../../parse/services/tmdb.service";
-import { enrichVideoDetailsFromImdb } from "../../parse/services/imdb-crawlee.service";
-import type { ImdbDetailsResultType } from "../../parse/types";
 import { GetEmbedding } from "../../open-ai/services";
 import { UploadImageByUrl, UploadImageByBase64, DeleteFile } from "../../files/files.service";
-import { GetAnilistDetailsById } from "../../parse/services/anilist.service";
-import { getParseSourceBySlug } from "../../parse/utils/collection-routing.util";
+import {
+  getCollectionSlugForMediaKind,
+  getMediaKindForCollectionSlug,
+} from "../../media/constants/media-kind.const";
+import { MediaError } from "../../media/errors/media.error";
+import { providerRegistry } from "../../media/providers";
+import { getMediaDetails } from "../../media/services/media-details.service";
+import type {
+  NormalizedItemDetailsType,
+  ProviderNameType,
+} from "../../media/types";
+import { buildCanonicalKey } from "../../media/utils/canonical-key.util";
+import { toProviderEnum } from "../../media/types/provider.type";
 import {
   UpdateItemEmbedding,
   GetItemEmbedding,
@@ -37,7 +42,6 @@ import {
   getUserItemsRateStats,
   getUserItemsStatusStats,
 } from "./item-stats.service";
-import { normalizeText } from "~/utils/normalize-text";
 import { logger } from "~/lib/logger";
 import { MAX_ALL_USER_ITEMS } from "~/constants/limits.const";
 import { normalizeExternalRating } from "../utils/normalize-external-rating.util";
@@ -101,81 +105,61 @@ async function UpdateEmbedding(props: {
 
 async function CreateItem(props: {
   ctx: ContextType;
-  type: "imdb" | "anilist";
-  parsedId: string;
-  collectionId: string;
+  provider: ProviderNameType;
+  externalId: string;
+  details: NormalizedItemDetailsType;
+  collection: { id: string; name: string; slug: string };
 }) {
-  const { ctx, collectionId } = props;
-  
-  logger.debug(`[CreateItem] Starting to create item with parsedId: ${props.parsedId}, type: ${props.type}, collectionId: ${collectionId}`);
-  const startTime = Date.now();
-  
-  // Normalize parsedId: lowercase + trim for consistency
-  const parsedId = normalizeText(props.parsedId);
-  logger.debug(`[CreateItem] Normalized parsedId: ${parsedId}`);
+  const { ctx, provider, externalId, details, collection } = props;
 
-  // Check if item already exists before expensive operations
-  logger.debug(`[CreateItem] Checking if item already exists: ${parsedId}`);
+  const startTime = Date.now();
+
+  const providerEnum = toProviderEnum(provider);
+  if (!providerEnum) {
+    throw new MediaError("PROVIDER_DISABLED", `Unknown provider "${provider}"`);
+  }
+
+  // Exact, case-preserving key. External ids never go through normalizeText().
+  const parsedId = buildCanonicalKey(providerEnum, externalId);
+  logger.debug(`[CreateItem] Canonical key: ${parsedId}`);
+
+  const identifiers = details.identifiers.length
+    ? details.identifiers
+    : [{ provider, externalId }];
+
+  // An item may already be known under any of its provider identifiers, not
+  // just the one the user searched from.
   const existingItem = await ctx.db.item.findFirst({
     where: {
-      parsedId,
+      OR: [
+        { parsedId },
+        {
+          externalIdentifiers: {
+            some: {
+              OR: identifiers.flatMap((identifier) => {
+                const identifierEnum = toProviderEnum(identifier.provider);
+                return identifierEnum
+                  ? [
+                      {
+                        provider: identifierEnum,
+                        externalId: identifier.externalId,
+                      },
+                    ]
+                  : [];
+              }),
+            },
+          },
+        },
+      ],
     },
   });
 
   if (existingItem) {
-    logger.debug(`[CreateItem] Item already exists: ${parsedId} - ID: ${existingItem.id}, Title: "${existingItem.title}" (${Date.now() - startTime}ms)`);
+    logger.debug(`[CreateItem] Item already exists: ${parsedId} - ID: ${existingItem.id} (${Date.now() - startTime}ms)`);
     return existingItem;
   }
 
-  // Fetch details OUTSIDE transaction to avoid timeout
-  // ScrapingAnt requests can take 30+ seconds each
-  logger.debug(`[CreateItem] Fetching details for ${parsedId} from ${props.type}`);
-  let details: Record<string, unknown>;
-
-  switch (props.type) {
-    case "imdb": {
-      logger.debug("[CreateItem] IMDB: fetching TMDB details by IMDb id", {
-        parsedId,
-      });
-      details = await getVideoDetailsByImdbId(parsedId);
-      logger.debug("[CreateItem] IMDB: TMDB details received, enriching from IMDB page", {
-        parsedId,
-        title: (details as ImdbDetailsResultType).title,
-      });
-      details = await enrichVideoDetailsFromImdb(
-        parsedId,
-        details as ImdbDetailsResultType,
-      );
-      break;
-    }
-    case "anilist":
-      details = await GetAnilistDetailsById(parsedId);
-      break;
-    default:
-      throw new Error("Invalid type");
-  }
-  logger.debug(`[CreateItem] Details fetched for ${parsedId} (${Date.now() - startTime}ms)`);
-
-  const title = details?.title;
-  if (!title || typeof title !== "string") {
-    logger.error(`[CreateItem] Parse error! Title not found for ${parsedId}`);
-    throw new Error("Parse error! Title not found!");
-  }
-  logger.debug(`[CreateItem] Parsed title: "${title}"`);
-
-  // Get collection info
-  logger.debug(`[CreateItem] Fetching collection info: ${collectionId}`);
-  const collection = await ctx.db.collection.findUnique({
-    where: {
-      id: collectionId,
-    },
-  });
-
-  if (!collection) {
-    logger.error(`[CreateItem] Collection not found: ${collectionId}`);
-    throw new Error("Collection not found!");
-  }
-  logger.debug(`[CreateItem] Collection found: ${collection.name}`);
+  const { title } = details;
 
   // Upload image OUTSIDE transaction
   logger.debug(`[CreateItem] Uploading image for ${parsedId}`);
@@ -184,7 +168,7 @@ async function CreateItem(props: {
   try {
     image = await UploadImageByUrl(
       collection.name,
-      details.image as string | null | undefined,
+      details.imageCandidates[0]?.url,
     );
   } catch (error) {
     logger.error(
@@ -206,14 +190,32 @@ async function CreateItem(props: {
           data: {
             collectionId: collection.id,
             title,
-            year: details.year as number,
-            description: details.description as string,
+            originalTitle: details.originalTitle,
+            originalLanguage: details.originalLanguage,
+            sourceUrl: details.sourceUrl,
+            year: details.year,
+            description: details.description,
             parsedId,
             image,
             externalRating:
-              typeof details.rating === "number"
-                ? normalizeExternalRating(details.rating)
+              details.rating != null
+                ? normalizeExternalRating(details.rating.normalized10)
                 : null,
+            externalIdentifiers: {
+              create: identifiers.flatMap((identifier) => {
+                const identifierEnum = toProviderEnum(identifier.provider);
+                return identifierEnum
+                  ? [
+                      {
+                        provider: identifierEnum,
+                        externalId: identifier.externalId,
+                        url: identifier.url ?? null,
+                        isPrimary: identifier.provider === provider,
+                      },
+                    ]
+                  : [];
+              }),
+            },
           },
         });
       } catch (error) {
@@ -236,7 +238,7 @@ async function CreateItem(props: {
       }
       logger.debug(`[CreateItem] Item created in DB: ${item.id} - "${item.title}"`);
 
-      const keys = Object.keys(details);
+      const keys = Object.keys(details.fields);
 
       const fieldGroups =
         keys.length === 0
@@ -250,7 +252,7 @@ async function CreateItem(props: {
             });
       logger.debug(`[CreateItem] Found ${fieldGroups.length} field groups for ${parsedId}`);
 
-      const candidates = buildFieldCandidates(details, fieldGroups);
+      const candidates = buildFieldCandidates(details.fields, fieldGroups);
 
       logger.debug(`[CreateItem] Upserting ${candidates.length} fields for ${parsedId}`);
       // A field is identified by (fieldGroupId, value): looking it up by value
@@ -518,41 +520,56 @@ export async function AddToCollection(props: {
   }
   logger.debug(`[AddToCollection] Collection found: ${collection.slug}`);
 
+  const mediaKind = getMediaKindForCollectionSlug(collection.slug);
+
+  if (!mediaKind) {
+    throw new MediaError(
+      "PROVIDER_DISABLED",
+      `No provider for collection "${collection.slug}"`,
+    );
+  }
+
+  const [adapter] = providerRegistry.getEnabledForKind(mediaKind);
+
+  if (!adapter) {
+    throw new MediaError(
+      "PROVIDER_DISABLED",
+      `No enabled provider for "${mediaKind}"`,
+    );
+  }
+
   let item;
   try {
-    switch (getParseSourceBySlug(collection.slug)) {
-      case "imdb": {
-        const found = await findByImdbId(input.parsedId);
-        const mediaType = found?.mediaType ?? "movie";
-        const targetSlug = mediaType === "movie" ? "film" : "serie";
-        const targetCollection = await ctx.db.collection.findUnique({
-          where: { slug: targetSlug },
-        });
-        if (!targetCollection) {
-          throw new Error(`Collection "${targetSlug}" not found`);
-        }
-        logger.debug(`[AddToCollection] Creating video item (${mediaType}) for ${targetSlug}`);
-        item = await CreateItem({
-          ctx,
-          type: "imdb",
-          parsedId: input.parsedId,
-          collectionId: targetCollection.id,
-        });
-        break;
-      }
-      case "anilist":
-        logger.debug(`[AddToCollection] Creating Anilist item for ${collection.slug}`);
-        item = await CreateItem({
-          ctx,
-          type: "anilist",
-          parsedId: input.parsedId,
-          collectionId: collection.id,
-        });
-        break;
-      default:
-        logger.error(`[AddToCollection] No provider for collection: ${collection.slug}`);
-        throw new Error(`No provider for collection "${collection.slug}"`);
+    // Details are re-fetched server-side: the client only names the provider
+    // and the external id.
+    const details = await getMediaDetails({
+      provider: adapter.name,
+      externalId: input.parsedId,
+    });
+
+    // The provider decides what the item actually is — a TMDB search from the
+    // Film tab may well return a series.
+    const targetSlug = getCollectionSlugForMediaKind(details.mediaKind);
+    const targetCollection =
+      targetSlug === collection.slug
+        ? collection
+        : await ctx.db.collection.findUnique({ where: { slug: targetSlug } });
+
+    if (!targetCollection) {
+      throw new MediaError(
+        "MEDIA_KIND_MISMATCH",
+        `Collection "${targetSlug}" not found for ${details.mediaKind}`,
+      );
     }
+
+    logger.debug(`[AddToCollection] Creating ${details.mediaKind} item in ${targetSlug}`);
+    item = await CreateItem({
+      ctx,
+      provider: adapter.name,
+      externalId: input.parsedId,
+      details,
+      collection: targetCollection,
+    });
     logger.debug(`[AddToCollection] Item created successfully: ${item.id} - "${item.title}" (${Date.now() - startTime}ms)`);
   } catch (error) {
     const duration = Date.now() - startTime;
