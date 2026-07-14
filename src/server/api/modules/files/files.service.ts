@@ -1,9 +1,14 @@
+import { createHash } from "node:crypto";
 import {
   v2 as cloudinary,
   type UploadApiErrorResponse,
   type UploadApiResponse,
 } from "cloudinary";
 import { env } from "../../../../env";
+import { logger } from "~/lib/logger";
+import { MediaError } from "../media/errors/media.error";
+import { downloadProviderImage } from "../media/services/image-download.service";
+import type { ImageCandidateType, MediaKindType } from "../media/types";
 
 cloudinary.config({
   secure: true,
@@ -52,6 +57,105 @@ export const UploadImageByUrl = async (
     const err = error as UploadApiErrorResponse;
     console.error(`[UploadImageByUrl] Error uploading image to ${folder} after ${duration}ms:`, err.message);
     throw new Error(`Error uploading image: ${err.message}`);
+  }
+};
+
+/** Stable, non-guessable public id: the canonical key never leaks into the path. */
+const toDeterministicPublicId = (canonicalKey: string): string =>
+  createHash("sha256").update(canonicalKey).digest("hex").slice(0, 24);
+
+const uploadBuffer = (
+  buffer: Buffer,
+  folder: string,
+  publicId: string,
+): Promise<UploadApiResponse> =>
+  new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      {
+        folder: `${env.NEXT_PUBLIC_CLOUDINARY_FOLDER}/${folder}`,
+        public_id: publicId,
+        overwrite: true,
+        resource_type: "image",
+      },
+      (error, result) => {
+        if (error || !result) {
+          reject(
+            new MediaError(
+              "POSTER_DOWNLOAD_FAILED",
+              `Cloudinary upload failed: ${error?.message ?? "no result"}`,
+              { cause: error },
+            ),
+          );
+          return;
+        }
+        resolve(result);
+      },
+    );
+
+    stream.end(buffer);
+  });
+
+/**
+ * The one way a provider image becomes an item poster.
+ *
+ * The URL is never handed to Cloudinary to fetch: the server downloads the
+ * bytes itself, validates them, re-encodes them, and uploads a buffer. A
+ * persisted item therefore never hotlinks a provider, and a malicious or
+ * broken URL cannot reach the internal network or smuggle in a non-image.
+ */
+export const DownloadAndUploadProviderImage = async (props: {
+  folder: string;
+  canonicalKey: string;
+  mediaKind: MediaKindType;
+  candidate: ImageCandidateType;
+}): Promise<string> => {
+  const { folder, canonicalKey, mediaKind, candidate } = props;
+
+  if (!candidate.canPersist) {
+    throw new MediaError(
+      "POSTER_UNSAFE_URL",
+      `${candidate.source} images may not be stored`,
+    );
+  }
+
+  const startTime = Date.now();
+  const image = await downloadProviderImage({
+    url: candidate.url,
+    mediaKind,
+  });
+
+  const publicId = toDeterministicPublicId(canonicalKey);
+  const response = await uploadBuffer(image.buffer, folder, publicId);
+  const imageId = extractId(response.public_id);
+
+  if (!imageId) {
+    throw new MediaError(
+      "POSTER_DOWNLOAD_FAILED",
+      "Cloudinary returned an unusable public id",
+    );
+  }
+
+  logger.debug(
+    `[DownloadAndUploadProviderImage] Stored ${candidate.source} cover for ${canonicalKey} as ${imageId} (${Date.now() - startTime}ms)`,
+  );
+
+  return imageId;
+};
+
+/** Deletes an image uploaded moments ago, e.g. when the DB write then failed. */
+export const DeleteUploadedImage = async (
+  folder: string,
+  publicId: string,
+): Promise<void> => {
+  try {
+    await cloudinary.uploader.destroy(
+      `${env.NEXT_PUBLIC_CLOUDINARY_FOLDER}/${folder}/${publicId}`,
+    );
+  } catch (error) {
+    logger.error(
+      `[DeleteUploadedImage] Failed to remove orphan image ${publicId}`,
+      error,
+    );
   }
 };
 

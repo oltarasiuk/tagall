@@ -16,7 +16,14 @@ import type {
   GetNearestItemsInputType,
 } from "../types";
 import { GetEmbedding } from "../../open-ai/services";
-import { UploadImageByUrl, UploadImageByBase64, DeleteFile } from "../../files/files.service";
+import {
+  UploadImageByUrl,
+  UploadImageByBase64,
+  DeleteFile,
+  DownloadAndUploadProviderImage,
+  DeleteUploadedImage,
+} from "../../files/files.service";
+import { selectImageCandidates } from "../../media/utils/select-image-candidates.util";
 import {
   getCollectionSlugForMediaKind,
   getMediaKindForCollectionSlug,
@@ -161,28 +168,51 @@ async function CreateItem(props: {
 
   const { title } = details;
 
-  // Upload image OUTSIDE transaction
-  logger.debug(`[CreateItem] Uploading image for ${parsedId}`);
+  // Poster download and upload stay outside the transaction: no network call
+  // may hold a DB transaction open.
+  logger.debug(`[CreateItem] Downloading poster for ${parsedId}`);
   const uploadStartTime = Date.now();
+  const candidates = selectImageCandidates(
+    details.imageCandidates,
+    details.mediaKind,
+  );
+
   let image: string | null = null;
-  try {
-    image = await UploadImageByUrl(
-      collection.name,
-      details.imageCandidates[0]?.url,
-    );
-  } catch (error) {
-    logger.error(
-      `[CreateItem] Poster upload failed for ${parsedId}`,
-      error,
-    );
-    throw error;
+  let lastImageError: unknown = null;
+
+  for (const candidate of candidates) {
+    try {
+      image = await DownloadAndUploadProviderImage({
+        folder: collection.name,
+        canonicalKey: parsedId,
+        mediaKind: details.mediaKind,
+        candidate,
+      });
+      break;
+    } catch (error) {
+      lastImageError = error;
+      logger.error(
+        `[CreateItem] Poster candidate from ${candidate.source} rejected for ${parsedId}`,
+        error,
+      );
+    }
   }
-  logger.debug(`[CreateItem] Image uploaded for ${parsedId}: ${image ?? "null"} (${Date.now() - uploadStartTime}ms)`);
+
+  if (!image) {
+    // Better no item than an item hotlinking a provider or showing no cover:
+    // the UI turns this into a manual cover prompt.
+    throw new MediaError(
+      "POSTER_REQUIRED",
+      `No usable cover for "${title}". Provide one manually.`,
+      { cause: lastImageError },
+    );
+  }
+  logger.debug(`[CreateItem] Poster stored for ${parsedId}: ${image} (${Date.now() - uploadStartTime}ms)`);
 
   // Now start transaction for DB operations only
   logger.debug(`[CreateItem] Starting database transaction for ${parsedId}`);
   const transactionStartTime = Date.now();
-  const transactionResult = await ctx.db.$transaction(
+  const runTransaction = () => ctx.db.$transaction(
     async (prisma) => {
       let item;
       try {
@@ -299,6 +329,15 @@ async function CreateItem(props: {
     },
     { timeout: 15_000 }, // DB-only work inside the transaction; external calls happen before it
   );
+
+  let transactionResult;
+  try {
+    transactionResult = await runTransaction();
+  } catch (error) {
+    // The poster is already in Cloudinary but no item points at it.
+    await DeleteUploadedImage(collection.name, image);
+    throw error;
+  }
 
   const transactionDuration = Date.now() - transactionStartTime;
   const totalDuration = Date.now() - startTime;
