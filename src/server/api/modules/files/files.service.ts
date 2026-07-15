@@ -18,6 +18,22 @@ cloudinary.config({
   api_secret: env.CLOUDINARY_API_SECRET,
 });
 
+/**
+ * Read-only authenticated ping for on-demand health checks. Creates no asset;
+ * just confirms the credentials reach Cloudinary. Never throws — resolves to a
+ * plain success/failure the health probe maps to a status.
+ */
+export const PingCloudinary = async (): Promise<
+  { ok: true } | { ok: false; safeMessage: string }
+> => {
+  try {
+    await cloudinary.api.ping();
+    return { ok: true };
+  } catch {
+    return { ok: false, safeMessage: "Cloudinary ping failed" };
+  }
+};
+
 function extractId(input: string | null | undefined): string | null {
   if (!input) return null;
   const regex = /tagall\/\w+\/(\w+)/;

@@ -14,8 +14,19 @@ export const CACHE_TTL_SECONDS = {
   public: 60 * 60 * 24 * 30,
 } as const;
 
-function isRedisConfigured(): boolean {
+export function isRedisConfigured(): boolean {
   return !!env.REDIS_HOST && !!env.REDIS_PORT;
+}
+
+/**
+ * One-shot PING for on-demand health checks. Returns whether Redis answered;
+ * never throws. Does not create or leave any state behind.
+ */
+export async function pingRedis(): Promise<boolean> {
+  const redis = await getClient();
+  if (!redis) return false;
+  const reply = await redis.ping();
+  return reply === "PONG";
 }
 
 async function getClient(): Promise<RedisClientType | null> {

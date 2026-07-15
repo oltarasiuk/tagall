@@ -7,6 +7,7 @@ import { ItemRouter } from "./modules/item/item.router";
 import { ItemCommentRouter } from "./modules/item-comment/item-comment.router";
 import { TagRouter } from "./modules/tag/tag.router";
 import { UserRouter } from "./modules/user/user.router";
+import { SystemHealthRouter } from "./modules/system-health/system-health.router";
 
 /**
  * This is the primary router for your server.
@@ -23,6 +24,7 @@ export const appRouter = createTRPCRouter({
   itemComment: ItemCommentRouter,
   tag: TagRouter,
   user: UserRouter,
+  systemHealth: SystemHealthRouter,
 });
 
 // export type definition of API

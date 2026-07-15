@@ -8,3 +8,4 @@ export * from "./profile/profile-container";
 export * from "./parse/parse-container";
 export * from "./search/search-container";
 export * from "./tierlist/tierlist-container";
+export * from "./system-health/system-health-container";
