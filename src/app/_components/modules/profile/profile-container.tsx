@@ -13,6 +13,7 @@ import { useUserItemsStats } from "../../../../hooks/queries/use-get-user-items-
 import { useState } from "react";
 import { z } from "zod";
 import Link from "next/link";
+import { Activity } from "lucide-react";
 import { GetUserItemsStatsInputSchema } from "../../../../server/api/modules/item/schemas";
 import { Button } from "../../ui";
 
@@ -53,16 +54,19 @@ function ProfileContainer() {
   return (
     <Container>
       <ProfileUpdateUserModal user={user} />
-      <div className="flex justify-end">
-        <Button asChild variant="secondary">
-          <Link href="/health">System health</Link>
-        </Button>
-      </div>
       <CollectionsTabs
         collections={collections}
         selectedCollectionsIds={selectedCollectionsIds}
         setSelectedCollectionsIds={setSelectedCollectionsIds}
         isMany={false}
+        actions={
+          <Button asChild variant="secondary" className="gap-2">
+            <Link href="/health">
+              <Activity className="size-4" />
+              System health
+            </Link>
+          </Button>
+        }
       />
       {!isLoading && stats ? (
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">

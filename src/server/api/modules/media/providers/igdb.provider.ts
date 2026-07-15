@@ -25,7 +25,6 @@ type IgdbGame = {
   rating_count?: number;
   total_rating?: number;
   total_rating_count?: number;
-  popularity?: number;
   genres?: { name?: string }[];
   themes?: { name?: string }[];
   game_modes?: { name?: string }[];
@@ -97,7 +96,7 @@ async function requestGames(query: string): Promise<IgdbGame[]> {
   return Array.isArray(data) ? data as IgdbGame[] : [];
 }
 
-const fields = "id,name,slug,summary,first_release_date,cover.image_id,cover.width,cover.height,rating,rating_count,total_rating,total_rating_count,popularity,game_type,genres.name,themes.name,game_modes.name,platforms.name,involved_companies.developer,involved_companies.company.name,external_games.external_game_source,external_games.uid";
+const fields = "id,name,slug,summary,first_release_date,cover.image_id,cover.width,cover.height,rating,rating_count,total_rating,total_rating_count,game_type,genres.name,themes.name,game_modes.name,platforms.name,involved_companies.developer,involved_companies.company.name,external_games.external_game_source,external_games.uid";
 
 const toResult = (game: IgdbGame, index: number): ProviderSearchResultType | null => {
   if (!game.id || !game.name) return null;
@@ -114,7 +113,7 @@ const toResult = (game: IgdbGame, index: number): ProviderSearchResultType | nul
       ...(steam ? [{ provider: "steam" as const, externalId: steam, url: `https://store.steampowered.com/app/${steam}` }] : []),
     ],
     isbns: [], imageCandidates: cover(game), rating: rating(game),
-    popularity: game.popularity != null ? { source: "igdb", value: game.popularity, kind: "hype" } : null,
+    popularity: null,
     genres: names(game.genres), keywords: names(game.themes), relevanceRank: index,
     sourceUrl: `https://www.igdb.com/games/${game.slug ?? id}`,
   };

@@ -163,7 +163,7 @@ const CORE_COMPONENTS: ComponentDefinition[] = [
     category: "core",
     label: "OpenAI embeddings",
     mode: "diagnostic",
-    // Billable: only ever runs when explicitly selected and confirmed.
+    // Potentially billable: runs with the automatic health check.
     cost: cost({ externalApiRequests: 1, potentiallyBillable: true }),
     requiredEnv: ["OPENAI_API_KEY"],
     isEnabled: () => true,

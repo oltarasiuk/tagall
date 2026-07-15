@@ -7,7 +7,7 @@ import {
   type ComponentDefinition,
   type ProbeContext,
 } from "./health-components.service";
-import { STORED_USAGE_COST, sumCosts } from "./diagnostic-cost.service";
+import { sumCosts } from "./diagnostic-cost.service";
 import type {
   ComponentHealth,
   ConfigurationSummary,
@@ -61,7 +61,6 @@ export function getConfigurationSummary(): ConfigurationSummary {
   return {
     generatedAt: new Date().toISOString(),
     components: getComponentDefinitions().map(toBaseHealth),
-    storedUsageCost: STORED_USAGE_COST,
   };
 }
 
@@ -85,10 +84,7 @@ const withTimeout = async (
     const result = await Promise.race([
       definition.probe(ctx),
       new Promise<never>((_, reject) =>
-        setTimeout(
-          () => reject(new Error("probe timeout")),
-          PROBE_TIMEOUT_MS,
-        ),
+        setTimeout(() => reject(new Error("probe timeout")), PROBE_TIMEOUT_MS),
       ),
     ]);
 
@@ -148,8 +144,8 @@ async function runPool(
   return results;
 }
 
-// Process-local single-flight: a double click on "Run" reuses the in-flight run
-// instead of duplicating every probe. No Redis lock — a health check must not
+// Process-local single-flight: repeated runs reuse an in-flight check instead
+// of duplicating every probe. No Redis lock — a health check must not
 // create the very state it is meant to observe.
 const inFlight = new Map<string, Promise<RunDiagnosticsResult>>();
 
@@ -171,7 +167,9 @@ async function execute(
     startedAt,
     completedAt: new Date().toISOString(),
     components,
-    actualCost: sumCosts(components.map((component) => component.diagnosticCost)),
+    actualCost: sumCosts(
+      components.map((component) => component.diagnosticCost),
+    ),
   };
 }
 

@@ -15,12 +15,3 @@ export const sumCosts = (costs: Partial<DiagnosticCost>[]): DiagnosticCost =>
     }),
     { ...ZERO_COST },
   );
-
-/**
- * Stored-usage analysis reads existing rows only: a handful of bounded
- * aggregate queries, no external calls and no writes.
- */
-export const STORED_USAGE_COST: DiagnosticCost = {
-  ...ZERO_COST,
-  databaseQueries: 4,
-};

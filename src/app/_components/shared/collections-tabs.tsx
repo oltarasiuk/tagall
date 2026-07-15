@@ -1,4 +1,8 @@
-import React, { type Dispatch, type SetStateAction } from "react";
+import React, {
+  type Dispatch,
+  type ReactNode,
+  type SetStateAction,
+} from "react";
 import type { CollectionType } from "../../../server/api/modules/collection/types";
 import { GrainCardContainer } from "./grain-card-container";
 import { Button } from "../ui";
@@ -10,6 +14,7 @@ type Props = {
   isMany?: boolean;
   clear?: () => void;
   allowDeselect?: boolean;
+  actions?: ReactNode;
 };
 
 export const CollectionsTabs = (props: Props) => {
@@ -20,6 +25,7 @@ export const CollectionsTabs = (props: Props) => {
     isMany = true,
     clear,
     allowDeselect = true,
+    actions,
   } = props;
 
   const onClick = (collectionId: string) => {
@@ -45,21 +51,24 @@ export const CollectionsTabs = (props: Props) => {
   };
 
   return (
-    <div className="w-min">
-    <GrainCardContainer>
-      {collections.map((collection) => (
-        <Button
+    <div className="w-fit max-w-full">
+      <GrainCardContainer className="flex-wrap items-center">
+        {collections.map((collection) => (
+          <Button
             key={collection.id}
             onClick={() => onClick(collection.id)}
-          variant={
-            selectedCollectionsIds.includes(collection.id) ? "default" : "ghost"
-          }
-          className="hover:scale-110 transition-all duration-300"
+            variant={
+              selectedCollectionsIds.includes(collection.id)
+                ? "default"
+                : "ghost"
+            }
+            className="transition-all duration-300 hover:scale-110"
           >
             {collection.name}
-        </Button>
-      ))}
-    </GrainCardContainer>
+          </Button>
+        ))}
+        {actions}
+      </GrainCardContainer>
     </div>
   );
 };

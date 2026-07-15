@@ -13,13 +13,9 @@ export type HealthStatus = (typeof HEALTH_STATUSES)[number];
 
 export type HealthCategory = "core" | "provider" | "pipeline";
 
-export type HealthMode = "configuration" | "diagnostic" | "usage_analysis";
+export type HealthMode = "configuration" | "diagnostic";
 
-/**
- * Every diagnostic declares, up front, exactly what it will cost. The UI sums
- * this for the selected checks and asks for confirmation before running; the
- * server returns the *actual* counts, which must not exceed the declared budget.
- */
+/** Each diagnostic declares its expected work; the server returns actual use. */
 export type DiagnosticCost = {
   databaseQueries: number;
   redisCommands: number;
@@ -57,7 +53,6 @@ export type ProbeResult = {
 export type ConfigurationSummary = {
   generatedAt: string;
   components: ComponentHealth[];
-  storedUsageCost: DiagnosticCost;
 };
 
 export type RunDiagnosticsResult = {
@@ -66,12 +61,4 @@ export type RunDiagnosticsResult = {
   completedAt: string;
   components: ComponentHealth[];
   actualCost: DiagnosticCost;
-};
-
-export type StoredUsageResult = {
-  generatedAt: string;
-  providerIdentifierCounts: Record<string, number>;
-  primaryProviderCounts: Record<string, number>;
-  artworkSourceCounts: Record<string, number>;
-  generatedCoverCount: number;
 };
