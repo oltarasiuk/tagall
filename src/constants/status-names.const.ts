@@ -33,9 +33,17 @@ export const STATUS_VALUES = [
 ] as const;
 
 export const STATUS_COLORS: Record<ItemStatus, string> = {
-  COMPLETED: "text-green-400",
-  INPROGRESS: "text-yellow-400",
-  WAITING: "text-yellow-400",
-  NOTSTARTED: "text-foreground",
-  ABANDONED: "text-red-400",
+  COMPLETED: "text-emerald-400",
+  INPROGRESS: "text-sky-400",
+  WAITING: "text-amber-400",
+  NOTSTARTED: "text-slate-400",
+  ABANDONED: "text-rose-400",
+} as const;
+
+export const STATUS_CHART_COLORS: Record<ItemStatus, string> = {
+  COMPLETED: "#34d399",
+  INPROGRESS: "#38bdf8",
+  WAITING: "#fbbf24",
+  NOTSTARTED: "#94a3b8",
+  ABANDONED: "#fb7185",
 } as const;

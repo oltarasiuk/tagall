@@ -6,13 +6,22 @@ type Props = {
   className?: string;
 };
 
-const ItemRatingBadge = ({ rate, className }: Props) => (
-  <Tooltip content="My rating">
-    <span className={cn("flex items-center gap-1 font-semibold text-yellow-400", className)}>
-      <span>★</span>
-      <span>{Math.round(rate * 10) / 10}</span>
-    </span>
-  </Tooltip>
-);
+const ItemRatingBadge = ({ rate, className }: Props) => {
+  if (rate <= 0) return null;
+
+  return (
+    <Tooltip content="My rating">
+      <span
+        className={cn(
+          "flex items-center gap-1 font-semibold text-yellow-400",
+          className,
+        )}
+      >
+        <span>★</span>
+        <span>{Math.round(rate * 10) / 10}</span>
+      </span>
+    </Tooltip>
+  );
+};
 
 export { ItemRatingBadge };

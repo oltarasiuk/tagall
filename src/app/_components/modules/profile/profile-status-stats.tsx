@@ -9,6 +9,7 @@ import type { ItemsStatsType } from "../../../../server/api/modules/item/types";
 import { GrainCardContainer } from "../../shared";
 import { Label, Pie, PieChart } from "recharts";
 import {
+  STATUS_CHART_COLORS,
   STATUS_NAMES,
   STATUS_VALUES,
 } from "../../../../constants/status-names.const";
@@ -16,14 +17,6 @@ import {
 type Props = {
   all: number;
   statusStats: ItemsStatsType["status"];
-};
-
-const STATUS_COLORS: Record<string, string> = {
-  ABANDONED: "hsl(var(--chart-5))",
-  COMPLETED: "hsl(var(--chart-1))",
-  INPROGRESS: "hsl(var(--chart-2))",
-  NOTSTARTED: "hsl(var(--chart-3))",
-  WAITING: "hsl(var(--chart-4))",
 };
 
 const ProfileStatusStats = (props: Props) => {
@@ -34,11 +27,9 @@ const ProfileStatusStats = (props: Props) => {
   });
 
   return (
-    <GrainCardContainer className="flex-col p-4 h-[320px] w-full">
-      <div className="flex flex-col h-full">
-        <Header vtag="h5">
-          By Status
-        </Header>
+    <GrainCardContainer className="h-[320px] w-full flex-col p-4">
+      <div className="flex h-full flex-col">
+        <Header vtag="h5">By Status</Header>
         <div className="flex flex-col items-center gap-4 lg:flex-row lg:items-center lg:justify-center">
           <div className="flex flex-col justify-center gap-3">
             {sortedStatusStats.map((stat) => (
@@ -46,7 +37,7 @@ const ProfileStatusStats = (props: Props) => {
                 <div
                   className="h-8 w-1.5 shrink-0 rounded-full"
                   style={{
-                    backgroundColor: STATUS_COLORS[stat.status],
+                    backgroundColor: STATUS_CHART_COLORS[stat.status],
                   }}
                 />
                 <span className="min-w-[110px] text-sm font-medium">
@@ -63,23 +54,23 @@ const ProfileStatusStats = (props: Props) => {
               },
               ABANDONED: {
                 label: "Abandoned",
-                color: "hsl(var(--chart-5))",
+                color: STATUS_CHART_COLORS.ABANDONED,
               },
               COMPLETED: {
                 label: "Completed",
-                color: "hsl(var(--chart-1))",
+                color: STATUS_CHART_COLORS.COMPLETED,
               },
               INPROGRESS: {
                 label: "In Progress",
-                color: "hsl(var(--chart-2))",
+                color: STATUS_CHART_COLORS.INPROGRESS,
               },
               NOTSTARTED: {
                 label: "Not Started",
-                color: "hsl(var(--chart-3))",
+                color: STATUS_CHART_COLORS.NOTSTARTED,
               },
               WAITING: {
                 label: "Waiting",
-                color: "hsl(var(--chart-4))",
+                color: STATUS_CHART_COLORS.WAITING,
               },
             }}
             className="min-h-[250px] w-full lg:w-[300px]"

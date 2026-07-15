@@ -63,10 +63,10 @@ const HomeMediumItem = (props: Props) => {
               showLabel={false}
               className="text-xs"
             />
-            {item.rate != null && (
+            {item.rate != null && item.rate > 0 && (
               <ItemRatingBadge rate={item.rate} className="text-xs" />
             )}
-            {item.externalRating != null && (
+            {item.externalRating != null && item.externalRating > 0 && (
               <ItemExternalRatingBadge
                 rating={item.externalRating}
                 className="text-xs text-red-500"

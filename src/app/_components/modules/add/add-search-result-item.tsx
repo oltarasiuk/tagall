@@ -129,7 +129,7 @@ const AddSearchResultItem = (props: Props) => {
               {searchResult.year}
             </span>
           )}
-          {searchResult.rating != null && (
+          {searchResult.rating != null && searchResult.rating > 0 && (
             <div
               className="flex items-center gap-1"
               title={searchResult.ratingSource ?? undefined}

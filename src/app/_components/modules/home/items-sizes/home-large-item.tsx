@@ -78,11 +78,11 @@ const HomeLargeItem = (props: Props) => {
         <div className="flex items-center justify-end gap-3">
           <ItemStatusBadge status={item.status} className="text-base" />
 
-          {item.rate ? (
+          {item.rate != null && item.rate > 0 ? (
             <ItemRatingBadge rate={item.rate} className="text-base" />
           ) : null}
 
-          {item.externalRating != null && (
+          {item.externalRating != null && item.externalRating > 0 && (
             <ItemExternalRatingBadge
               rating={item.externalRating}
               className="text-base text-red-500"
