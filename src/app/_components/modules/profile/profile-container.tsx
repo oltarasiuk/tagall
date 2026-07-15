@@ -12,7 +12,9 @@ import { ProfileRateStats } from "./profile-rate-stats";
 import { useUserItemsStats } from "../../../../hooks/queries/use-get-user-items-stats.hook";
 import { useState } from "react";
 import { z } from "zod";
+import Link from "next/link";
 import { GetUserItemsStatsInputSchema } from "../../../../server/api/modules/item/schemas";
+import { Button } from "../../ui";
 
 export const ProfileParamsSchema = z.object({
   collectionsIds: GetUserItemsStatsInputSchema._def.innerType.default([]),
@@ -51,6 +53,11 @@ function ProfileContainer() {
   return (
     <Container>
       <ProfileUpdateUserModal user={user} />
+      <div className="flex justify-end">
+        <Button asChild variant="secondary">
+          <Link href="/health">System health</Link>
+        </Button>
+      </div>
       <CollectionsTabs
         collections={collections}
         selectedCollectionsIds={selectedCollectionsIds}

@@ -1,13 +1,5 @@
-import { api, HydrateClient } from "../../../../../trpc/server";
-import { SystemHealthContainer } from "../../../../_components/modules";
+import { redirect } from "next/navigation";
 
 export default function SystemHealthPage() {
-  // Zero-dependency configuration summary only. No DB/Redis/API on page load.
-  void api.systemHealth.getConfigurationSummary.prefetch();
-
-  return (
-    <HydrateClient>
-      <SystemHealthContainer />
-    </HydrateClient>
-  );
+  redirect("/health");
 }

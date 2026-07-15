@@ -213,7 +213,7 @@ const AddItemModal = (props: Props) => {
                   />
                 )}
 
-                {/* Cover picker — always visible */}
+                {/* Cover picker */}
                 <CoverPicker
                   provider={selectedItem.provider}
                   externalId={selectedItem.externalId}

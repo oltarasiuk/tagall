@@ -14,7 +14,7 @@
     "db:studio": "prisma studio",
     "db:backfill-ratings": "node --env-file=.env --import=tsx scripts/backfill-external-ratings.ts",
     "db:backfill-external-identifiers": "node --env-file=.env --import=tsx scripts/backfill-external-identifiers.ts",
-    "dev": "next dev",
+    "dev": "NODE_ENV=development next dev",
     "postinstall": "prisma generate",
     "lint": "next lint",
     "format": "prettier --write .",

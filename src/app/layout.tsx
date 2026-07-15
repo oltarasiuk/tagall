@@ -7,7 +7,6 @@ import { SessionProviderWrapper } from "./_components/wrappers/session-provider-
 import { ToastWrapper } from "./_components/wrappers/toast-wrapper";
 import { Suspense } from "react";
 import LoadingPage from "./loading";
-import { DataSourcesFooter } from "./_components/shared/data-sources-footer";
 import { cloakSSROnlySecret } from "ssr-only-secrets";
 import { headers } from "next/headers";
 
@@ -96,7 +95,6 @@ export default async function RootLayout({
           <SessionProviderWrapper session={session}>
             <ToastWrapper>
               <Suspense fallback={<LoadingPage />}>{children}</Suspense>
-              <DataSourcesFooter />
             </ToastWrapper>
           </SessionProviderWrapper>
         </TRPCReactProvider>

@@ -43,7 +43,7 @@ function RandomContainer() {
     schema: RandomParamsSchema,
     defaultParams: {
       limit: DEFAULT_RANDOM_LIMIT,
-      itemSize: "medium",
+      itemSize: "large",
       filtering: [],
       collectionsIds: collections.map((collection) => collection.id),
     },

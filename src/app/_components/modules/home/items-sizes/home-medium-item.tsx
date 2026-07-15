@@ -5,6 +5,7 @@ import {
   CloudinaryImage,
   ItemExternalRatingBadge,
   ItemRatingBadge,
+  ItemStatusBadge,
   ItemTypeBadge,
 } from "../../../shared";
 
@@ -16,12 +17,12 @@ const HomeMediumItem = (props: Props) => {
   const { item } = props;
 
   return (
-    <CardContainer className="relative flex-col h-full overflow-hidden transition-all duration-300 hover:scale-105 hover:border-primary hover:shadow-md md:w-full">
+    <CardContainer className="relative h-full flex-col overflow-hidden transition-all duration-300 hover:scale-105 hover:border-primary hover:shadow-md md:w-full">
       {item.image && (
         <div className="pointer-events-none absolute inset-0 overflow-hidden">
           <CloudinaryImage
             variant="background"
-            className="!aspect-auto h-full w-full rounded-none border-0 object-cover opacity-5 blur-sm shadow-none"
+            className="!aspect-auto h-full w-full rounded-none border-0 object-cover opacity-5 shadow-none blur-sm"
             publicId={item.image}
             folder={item.collection.name}
           />
@@ -30,7 +31,10 @@ const HomeMediumItem = (props: Props) => {
 
       <div
         className="pointer-events-none absolute inset-0 z-[1] opacity-[0.035]"
-        style={{ backgroundImage: "url('/halftone.png')", backgroundRepeat: "repeat" }}
+        style={{
+          backgroundImage: "url('/halftone.png')",
+          backgroundRepeat: "repeat",
+        }}
       />
 
       <div className="relative z-10 aspect-[27/40]">
@@ -48,17 +52,28 @@ const HomeMediumItem = (props: Props) => {
         <Header vtag="h6" className="line-clamp-3 text-center">
           {item.title}
         </Header>
-        <ItemTypeBadge collectionName={item.collection.name} className="text-xs" />
-        {(item.rate != null || item.externalRating != null) && (
-          <div className="flex items-center gap-2">
+        <div className="flex w-full items-center justify-center gap-x-2 gap-y-1">
+          <ItemTypeBadge
+            collectionName={item.collection.name}
+            className="shrink-0 text-xs"
+          />
+          <div className="flex shrink-0 items-center gap-1.5">
+            <ItemStatusBadge
+              status={item.status}
+              showLabel={false}
+              className="text-xs"
+            />
             {item.rate != null && (
               <ItemRatingBadge rate={item.rate} className="text-xs" />
             )}
             {item.externalRating != null && (
-              <ItemExternalRatingBadge rating={item.externalRating} className="text-xs text-red-500" />
+              <ItemExternalRatingBadge
+                rating={item.externalRating}
+                className="text-xs text-red-500"
+              />
             )}
           </div>
-        )}
+        </div>
       </div>
     </CardContainer>
   );
