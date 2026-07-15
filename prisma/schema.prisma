@@ -132,6 +132,10 @@ model Item {
     description      String?
     sourceUrl        String?
     externalRating   Float?
+    // Sanitized label of where the persisted cover came from (e.g. "openlibrary",
+    // "steamgriddb", "manual", "generated"). Used only for on-demand usage
+    // analysis; never a URL and never user media data.
+    artworkSource    String?
     embedding        Unsupported("vector(1536)")?
 
     fields              Field[]

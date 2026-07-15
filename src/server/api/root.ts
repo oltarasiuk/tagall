@@ -1,4 +1,5 @@
 import { createCallerFactory, createTRPCRouter } from "~/server/api/trpc";
+import { ArtworkRouter } from "./modules/artwork/artwork.router";
 import { CollectionRouter } from "./modules/collection/collection.router";
 import { ParseRouter } from "./modules/parse/parse.router";
 import { FieldRouter } from "./modules/field/field.router";
@@ -15,6 +16,7 @@ import { UserRouter } from "./modules/user/user.router";
 export const appRouter = createTRPCRouter({
   collection: CollectionRouter,
   parse: ParseRouter,
+  artwork: ArtworkRouter,
   item: ItemRouter,
   field: FieldRouter,
   // openAi: OpenAiRouter,

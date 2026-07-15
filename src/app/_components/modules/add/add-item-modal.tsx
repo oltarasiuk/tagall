@@ -21,9 +21,11 @@ import {
   STATUS_VALUES,
 } from "../../../../constants";
 import type { SearchResultType } from "../../../../server/api/modules/parse/types";
+import type { ArtworkSelection } from "../../../../server/api/modules/artwork/types/artwork.type";
 import type { TagType } from "../../../../server/api/modules/tag/types";
 import { useAddItemToCollection } from "../../../../hooks";
 import { AddSearchResultItem } from "./add-search-result-item";
+import { CoverPicker } from "./cover-picker";
 import { useState } from "react";
 
 type Props = {
@@ -37,23 +39,23 @@ type Props = {
 
 const AddItemModal = (props: Props) => {
   const { selectedItem, open, setSelectedItem, tags } = props;
-  const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
+  // Auto is the default: the server picks the best cover and falls back to a
+  // generated one, so the add is never blocked on a missing poster.
+  const [artworkSelection, setArtworkSelection] = useState<ArtworkSelection>({
+    mode: "auto",
+    allowGeneratedFallback: true,
+  });
+  const [coverPreview, setCoverPreview] = useState<string | null>(
+    selectedItem.image,
+  );
   const { form, submit } = useAddItemToCollection({
     ...props,
-    selectedImageFile,
+    artworkSelection,
   });
 
   const status = form.watch("status");
   const rating = form.watch("rate");
   const tagsIds = form.watch("tagsIds");
-  const selectedImageUrl = form.watch("selectedImageUrl");
-  const needsCoverInput =
-    !selectedItem.image || selectedItem.importable === false;
-  const hasCover = Boolean(
-    (!needsCoverInput && selectedItem.image) ||
-    selectedImageUrl ||
-    selectedImageFile,
-  );
 
   // no-op: card is not clickable inside the modal
   const noop: Dispatch<SetStateAction<SearchResultType | null>> = () =>
@@ -211,44 +213,20 @@ const AddItemModal = (props: Props) => {
                   />
                 )}
 
-                {/* Comment title */}
-                {needsCoverInput && (
-                  <>
-                    <FormField
-                      control={form.control}
-                      name="selectedImageUrl"
-                      render={() => (
-                        <FormItem>
-                          <FormLabel>Cover URL</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="url"
-                              placeholder="https://…"
-                              value={selectedImageUrl ?? ""}
-                              onChange={(event) =>
-                                form.setValue(
-                                  "selectedImageUrl",
-                                  event.target.value,
-                                )
-                              }
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormItem>
-                      <FormLabel>Or upload a cover</FormLabel>
-                      <Input
-                        type="file"
-                        accept="image/*,.png,.jpg,.jpeg,.gif,.webp"
-                        onChange={(event) =>
-                          setSelectedImageFile(event.target.files?.[0] ?? null)
-                        }
-                      />
-                    </FormItem>
-                  </>
-                )}
+                {/* Cover picker — always visible */}
+                <CoverPicker
+                  provider={selectedItem.provider}
+                  externalId={selectedItem.externalId}
+                  mediaKind={selectedItem.mediaKind}
+                  defaultImage={selectedItem.image}
+                  selection={artworkSelection}
+                  preview={coverPreview}
+                  onChange={(selection, preview) => {
+                    setArtworkSelection(selection);
+                    setCoverPreview(preview);
+                  }}
+                />
+
                 <FormField
                   control={form.control}
                   name="commentTitle"
@@ -305,7 +283,7 @@ const AddItemModal = (props: Props) => {
 
                 <Button
                   className="w-full"
-                  disabled={form.formState.isSubmitting || !hasCover}
+                  disabled={form.formState.isSubmitting}
                   type="submit"
                 >
                   Add to collection

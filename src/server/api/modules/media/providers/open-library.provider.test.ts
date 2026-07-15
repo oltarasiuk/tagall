@@ -10,9 +10,13 @@ vi.mock("../services/provider-http.service", () => ({
   providerRequest: (...args: unknown[]) => providerRequest(...args),
 }));
 
-const { cleanSubjects, openLibraryProvider, parseYear, toWorkId } = await import(
-  "./open-library.provider"
-);
+const {
+  cleanSubjects,
+  getWorkEditionCovers,
+  openLibraryProvider,
+  parseYear,
+  toWorkId,
+} = await import("./open-library.provider");
 
 /** Routes each call by URL, the way the real API would. */
 const respond = (responses: Record<string, unknown>) => {
@@ -222,5 +226,35 @@ describe("openLibraryProvider.getDetails", () => {
     await expect(
       openLibraryProvider.getDetails("OL7353617M"),
     ).rejects.toMatchObject({ code: "ITEM_NOT_FOUND" });
+  });
+});
+
+describe("getWorkEditionCovers", () => {
+  it("collects and deduplicates cover ids across editions", async () => {
+    respond({
+      "/works/OL893415W/editions.json": {
+        entries: [
+          { covers: [11, 12] },
+          { covers: [12, 13] },
+          { covers: [-1] },
+          {},
+        ],
+      },
+    });
+
+    const covers = await getWorkEditionCovers("OL893415W");
+
+    expect(covers).toHaveLength(3);
+    expect(covers.map((c) => c.url)).toEqual([
+      "https://covers.openlibrary.org/b/id/11-L.jpg?default=false",
+      "https://covers.openlibrary.org/b/id/12-L.jpg?default=false",
+      "https://covers.openlibrary.org/b/id/13-L.jpg?default=false",
+    ]);
+    expect(covers.every((c) => c.canPersist)).toBe(true);
+  });
+
+  it("returns nothing for an invalid work id", async () => {
+    respond({});
+    expect(await getWorkEditionCovers("OL7353617M")).toEqual([]);
   });
 });

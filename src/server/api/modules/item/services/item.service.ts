@@ -17,26 +17,27 @@ import type {
 } from "../types";
 import { GetEmbedding } from "../../open-ai/services";
 import {
-  UploadImageByUrl,
-  UploadImageByBase64,
   DeleteFile,
-  DownloadAndUploadProviderImage,
   DeleteUploadedImage,
 } from "../../files/files.service";
-import { selectImageCandidates } from "../../media/utils/select-image-candidates.util";
-import { isMediaKindAllowedInCollection } from "../../media/constants/media-kind.const";
-import { MediaError, isMediaError } from "../../media/errors/media.error";
-import { getMediaDetails } from "../../media/services/media-details.service";
 import {
-  logItemCreated,
-  logMediaOperation,
-} from "../../media/services/media-telemetry.service";
+  getMediaKindForCollectionSlug,
+  isMediaKindAllowedInCollection,
+} from "../../media/constants/media-kind.const";
+import { MediaError } from "../../media/errors/media.error";
+import { getMediaDetails } from "../../media/services/media-details.service";
+import { logItemCreated } from "../../media/services/media-telemetry.service";
 import type {
   NormalizedItemDetailsType,
   ProviderNameType,
 } from "../../media/types";
-import { buildCanonicalKey } from "../../media/utils/canonical-key.util";
-import { toProviderEnum } from "../../media/types/provider.type";
+import { resolveArtwork } from "../../artwork/services/artwork-selection.service";
+import type { ArtworkSelection } from "../../artwork/types/artwork.type";
+import {
+  buildCanonicalKey,
+  parseCanonicalKey,
+} from "../../media/utils/canonical-key.util";
+import { toProviderEnum, toProviderName } from "../../media/types/provider.type";
 import {
   UpdateItemEmbedding,
   GetItemEmbedding,
@@ -52,7 +53,6 @@ import {
 import { logger } from "~/lib/logger";
 import { MAX_ALL_USER_ITEMS } from "~/constants/limits.const";
 import { normalizeExternalRating } from "../utils/normalize-external-rating.util";
-import { assertPublicUrl } from "../../../helpers";
 import {
   buildUserItemsWhere,
   buildUserItemsOrderBy,
@@ -111,16 +111,35 @@ async function UpdateEmbedding(props: {
   logger.debug(`[UpdateEmbedding] Successfully updated embedding for "${item.title}" (${totalDuration}ms)`);
 }
 
+/**
+ * Bridges the add input to an ArtworkSelection. Prefers the new `artwork`
+ * discriminated union; falls back to the deprecated flat fields for clients not
+ * yet migrated, and defaults to auto (with generated fallback) otherwise.
+ */
+function resolveSelectionFromInput(input: {
+  artwork?: ArtworkSelection;
+  selectedImageBase64?: string;
+  selectedImageUrl?: string;
+}): ArtworkSelection {
+  if (input.artwork) return input.artwork;
+  if (input.selectedImageBase64) {
+    return { mode: "upload", dataBase64: input.selectedImageBase64 };
+  }
+  if (input.selectedImageUrl) {
+    return { mode: "manual-url", url: input.selectedImageUrl };
+  }
+  return { mode: "auto", allowGeneratedFallback: true };
+}
+
 async function CreateItem(props: {
   ctx: ContextType;
   provider: ProviderNameType;
   externalId: string;
   details: NormalizedItemDetailsType;
   collection: { id: string; name: string; slug: string };
-  selectedImageUrl?: string;
-  selectedImageBase64?: string;
+  artwork: ArtworkSelection;
 }) {
-  const { ctx, provider, externalId, details, collection, selectedImageUrl, selectedImageBase64 } = props;
+  const { ctx, provider, externalId, details, collection, artwork } = props;
 
   const startTime = Date.now();
 
@@ -171,69 +190,26 @@ async function CreateItem(props: {
 
   const { title } = details;
 
-  // Poster download and upload stay outside the transaction: no network call
-  // may hold a DB transaction open.
-  logger.debug(`[CreateItem] Downloading poster for ${parsedId}`);
+  // Artwork resolution (download/upload/validate/generate) stays outside the
+  // transaction: no network call may hold a DB transaction open. The resolver
+  // picks the single persisted cover per the user's selection and never
+  // hotlinks a provider.
+  logger.debug(`[CreateItem] Resolving artwork for ${parsedId} (mode: ${artwork.mode})`);
   const uploadStartTime = Date.now();
-  const candidates = selectImageCandidates(
-    details.imageCandidates,
-    details.mediaKind,
-  );
-  const selectedCandidate = selectedImageUrl
-    ? candidates.find((candidate) => candidate.url === selectedImageUrl) ?? {
-        // A manual URL is still downloaded by the same hardened pipeline.
-        // Its host, redirects, MIME type, dimensions and bytes are validated
-        // there before anything reaches Cloudinary.
-        source: provider,
-        url: selectedImageUrl,
-        width: null,
-        height: null,
-        language: null,
-        likes: null,
-        kind: "cover" as const,
-        canPersist: true,
-      }
-    : null;
-  const candidatesToTry = selectedCandidate ? [selectedCandidate] : candidates;
-
-  let image: string | null = selectedImageBase64
-    ? await UploadImageByBase64(collection.name, selectedImageBase64)
-    : null;
-  let lastImageError: unknown = null;
-
-  if (!image) {
-    for (const candidate of candidatesToTry) {
-      try {
-        image = await DownloadAndUploadProviderImage({
-          folder: collection.name,
-          canonicalKey: parsedId,
-          mediaKind: details.mediaKind,
-          candidate,
-        });
-        break;
-      } catch (error) {
-        lastImageError = error;
-        logMediaOperation({
-          provider: candidate.source,
-          operation: "image",
-          code: isMediaError(error) ? error.code : "POSTER_DOWNLOAD_FAILED",
-          canonicalKey: parsedId,
-          durationMs: Date.now() - uploadStartTime,
-        });
-      }
-    }
-  }
-
-  if (!image) {
-    // Better no item than an item hotlinking a provider or showing no cover:
-    // the UI turns this into a manual cover prompt.
-    throw new MediaError(
-      "POSTER_REQUIRED",
-      `No usable cover for "${title}". Provide one manually.`,
-      { cause: lastImageError },
-    );
-  }
-  logger.debug(`[CreateItem] Poster stored for ${parsedId}: ${image} (${Date.now() - uploadStartTime}ms)`);
+  const resolved = await resolveArtwork({
+    selection: artwork,
+    context: {
+      folder: collection.name,
+      canonicalKey: parsedId,
+      provider,
+      externalId,
+      mediaKind: details.mediaKind,
+      title,
+    },
+    autoImageCandidates: details.imageCandidates,
+  });
+  const image = resolved.imageId;
+  logger.debug(`[CreateItem] Poster stored for ${parsedId}: ${image} from ${resolved.source} (${Date.now() - uploadStartTime}ms)`);
 
   // Now start transaction for DB operations only
   logger.debug(`[CreateItem] Starting database transaction for ${parsedId}`);
@@ -253,6 +229,7 @@ async function CreateItem(props: {
             description: details.description,
             parsedId,
             image,
+            artworkSource: resolved.source,
             externalRating:
               details.rating != null
                 ? normalizeExternalRating(details.rating.normalized10)
@@ -636,8 +613,7 @@ export async function AddToCollection(props: {
       externalId: input.externalId,
       details,
       collection,
-      selectedImageUrl: input.selectedImageUrl,
-      selectedImageBase64: input.selectedImageBase64,
+      artwork: resolveSelectionFromInput(input),
     });
     logger.debug(`[AddToCollection] Item created successfully: ${item.id} - "${item.title}" (${Date.now() - startTime}ms)`);
   } catch (error) {
@@ -783,39 +759,37 @@ export async function UpdateItemImage(props: {
   const { item } = userItem;
   const oldImage = item.image;
 
-  // Upload new image
-  let newImageId: string | null = null;
+  // Same picker as add: resolve the selection into one validated Cloudinary
+  // asset. Identity (collection, provider) never changes here.
+  const selection = resolveSelectionFromInput(input);
+  const parts = parseCanonicalKey(item.parsedId);
+  const mediaKind =
+    getMediaKindForCollectionSlug(item.collection.slug) ?? "book";
 
-  if (input.imageUrl) {
-    await assertPublicUrl(input.imageUrl);
-    newImageId = await UploadImageByUrl(item.collection.name, input.imageUrl);
-  } else if (input.imageBase64) {
-    newImageId = await UploadImageByBase64(
-      item.collection.name,
-      input.imageBase64,
-    );
-  }
+  const resolved = await resolveArtwork({
+    selection,
+    context: {
+      folder: item.collection.name,
+      canonicalKey: item.parsedId,
+      provider: parts ? toProviderName(parts.provider) : "openlibrary",
+      externalId: parts?.externalId ?? "",
+      mediaKind,
+      title: item.title,
+    },
+  });
 
-  if (!newImageId) {
-    throw new Error("Failed to upload image");
-  }
-
-  // Delete old image from Cloudinary if exists
-  if (oldImage) {
-    await DeleteFile(item.collection.name, oldImage);
-  }
-
-  // Update item image in database
   // NOTE: Item is shared across users (deduplicated by parsedId).
   // Updating the image here changes it for every user who has this item.
   await ctx.db.item.update({
-    where: {
-      id: input.id,
-    },
-    data: {
-      image: newImageId,
-    },
+    where: { id: input.id },
+    data: { image: resolved.imageId, artworkSource: resolved.source },
   });
+
+  // Delete the old asset only after the new one is saved: a failed update must
+  // never leave the item pointing at a poster that no longer exists.
+  if (oldImage && oldImage !== resolved.imageId) {
+    await DeleteFile(item.collection.name, oldImage);
+  }
 
   return "Item image updated successfully!";
 }

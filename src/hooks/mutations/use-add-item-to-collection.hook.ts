@@ -2,6 +2,7 @@
 
 import { type Dispatch, type SetStateAction } from "react";
 import type { SearchResultType } from "../../server/api/modules/parse/types";
+import type { ArtworkSelection } from "../../server/api/modules/artwork/types/artwork.type";
 import { ItemStatus } from "@prisma/client";
 import { api } from "../../trpc/react";
 import { toast } from "sonner";
@@ -16,14 +17,13 @@ const formSchema = z.object({
   rate: z.number().int().min(0).max(10),
   status: z.nativeEnum(ItemStatus),
   tagsIds: z.array(z.string().cuid()),
-  selectedImageUrl: z.string().url().optional().or(z.literal("")),
 });
 
 type formDataType = z.infer<typeof formSchema>;
 
 type Props = {
   selectedItem: SearchResultType | null;
-  selectedImageFile: File | null;
+  artworkSelection: ArtworkSelection;
   selectedCollectionId: string;
   setSelectedItem: Dispatch<SetStateAction<SearchResultType | null>>;
   setSearchResults: Dispatch<SetStateAction<SearchResultType[]>>;
@@ -33,7 +33,7 @@ export const useAddItemToCollection = (props: Props) => {
   const {
     selectedCollectionId,
     selectedItem,
-    selectedImageFile,
+    artworkSelection,
     setSelectedItem,
     setSearchResults,
   } = props;
@@ -54,14 +54,6 @@ export const useAddItemToCollection = (props: Props) => {
 
   const utils = api.useUtils();
 
-  const convertToBase64 = (file: File): Promise<string> =>
-    new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = () => reject(new Error("Failed to read cover image"));
-    });
-
   const submit = async (data: formDataType) => {
     if (!selectedItem) return;
 
@@ -71,14 +63,7 @@ export const useAddItemToCollection = (props: Props) => {
       return;
     }
 
-    const {
-      commentTitle,
-      commentDescription,
-      rate,
-      status,
-      tagsIds,
-      selectedImageUrl,
-    } = data;
+    const { commentTitle, commentDescription, rate, status, tagsIds } = data;
     const formData = {
       status,
       rate,
@@ -87,13 +72,7 @@ export const useAddItemToCollection = (props: Props) => {
       provider: selectedItem.provider,
       externalId: selectedItem.externalId,
       mediaKind: selectedItem.mediaKind,
-      selectedImageUrl:
-        selectedImageUrl ||
-        (selectedItem.importable !== false ? selectedItem.image : undefined) ||
-        undefined,
-      selectedImageBase64: selectedImageFile
-        ? await convertToBase64(selectedImageFile)
-        : undefined,
+      artwork: artworkSelection,
       ...((commentTitle || commentDescription) && {
         comment: {
           title: commentTitle,
@@ -123,6 +102,10 @@ export const useAddItemToCollection = (props: Props) => {
             (searchResult) => searchResult.resultKey !== selectedItem.resultKey,
           ),
         );
+        // Only close on success. A typed artwork/cover error keeps the modal
+        // open so the user can pick another cover without losing rating/tags.
+        setSelectedItem(null);
+        form.reset();
       },
       onError: () => {
         setSearchResults((prev) =>
@@ -134,9 +117,6 @@ export const useAddItemToCollection = (props: Props) => {
         );
       },
     });
-
-    setSelectedItem(null);
-    form.reset();
 
     toast.promise(promise, {
       loading: `Adding ${selectedItem.title}...`,

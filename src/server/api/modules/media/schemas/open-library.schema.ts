@@ -53,6 +53,17 @@ export const OpenLibraryWorkSchema = z.object({
 
 export type OpenLibraryWorkType = z.infer<typeof OpenLibraryWorkSchema>;
 
+export const OpenLibraryEditionsSchema = z.object({
+  entries: z
+    .array(
+      z.object({
+        covers: z.array(z.number()).optional().nullable(),
+      }),
+    )
+    .optional()
+    .nullable(),
+});
+
 export const OpenLibraryAuthorSchema = z.object({
   name: z.string().optional().nullable(),
 });

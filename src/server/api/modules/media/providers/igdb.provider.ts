@@ -31,8 +31,16 @@ type IgdbGame = {
   game_modes?: { name?: string }[];
   platforms?: { name?: string }[];
   involved_companies?: { company?: { name?: string }; developer?: boolean }[];
-  external_games?: { category?: number; uid?: string }[];
+  // `external_game_source` replaced the deprecated `category` enum. Steam = 1.
+  external_games?: { external_game_source?: number; uid?: string }[];
+  // `game_type` replaced the deprecated `category` enum.
+  game_type?: number;
 };
+
+// External game source ids: Steam is 1 (same value the deprecated category used).
+const STEAM_EXTERNAL_SOURCE = 1;
+// game_type ids kept as base games: 0 = Main Game, 8 = Remake, 9 = Remaster.
+const BASE_GAME_TYPES = "(0,8,9)";
 
 let token: { value: string; expiresAt: number } | null = null;
 
@@ -75,7 +83,9 @@ const rating = (game: IgdbGame) => normalizeRating({
 });
 
 const steamId = (game: IgdbGame): string | null =>
-  game.external_games?.find((external) => external.category === 1)?.uid ?? null;
+  game.external_games?.find(
+    (external) => external.external_game_source === STEAM_EXTERNAL_SOURCE,
+  )?.uid ?? null;
 
 async function requestGames(query: string): Promise<IgdbGame[]> {
   const accessToken = await getAccessToken();
@@ -87,7 +97,7 @@ async function requestGames(query: string): Promise<IgdbGame[]> {
   return Array.isArray(data) ? data as IgdbGame[] : [];
 }
 
-const fields = "id,name,slug,summary,first_release_date,cover.image_id,cover.width,cover.height,rating,rating_count,total_rating,total_rating_count,popularity,genres.name,themes.name,game_modes.name,platforms.name,involved_companies.developer,involved_companies.company.name,external_games.category,external_games.uid";
+const fields = "id,name,slug,summary,first_release_date,cover.image_id,cover.width,cover.height,rating,rating_count,total_rating,total_rating_count,popularity,game_type,genres.name,themes.name,game_modes.name,platforms.name,involved_companies.developer,involved_companies.company.name,external_games.external_game_source,external_games.uid";
 
 const toResult = (game: IgdbGame, index: number): ProviderSearchResultType | null => {
   if (!game.id || !game.name) return null;
@@ -115,7 +125,7 @@ export const igdbProvider: MediaProviderAdapterType = {
   get enabled() { return Boolean(env.IGDB_CLIENT_ID && env.IGDB_CLIENT_SECRET); },
   async search(input: ProviderSearchInputType) {
     const escaped = input.query.replace(/"/g, "\\\"");
-    const games = await requestGames(`search "${escaped}"; fields ${fields}; where category = (0,8,9); limit ${input.limit};`);
+    const games = await requestGames(`search "${escaped}"; fields ${fields}; where game_type = ${BASE_GAME_TYPES}; limit ${input.limit};`);
     const results = games.flatMap((game, index) => {
       const result = toResult(game, index);
       return result ? [result] : [];
@@ -129,7 +139,7 @@ export const igdbProvider: MediaProviderAdapterType = {
   },
   async getDetails(externalId: string): Promise<NormalizedItemDetailsType> {
     if (!/^\d+$/.test(externalId)) throw new MediaError("ITEM_NOT_FOUND", "Invalid IGDB id", { provider: "igdb" });
-    const [game] = await requestGames(`fields ${fields}; where id = ${externalId} & category = (0,8,9); limit 1;`);
+    const [game] = await requestGames(`fields ${fields}; where id = ${externalId} & game_type = ${BASE_GAME_TYPES}; limit 1;`);
     const result = game ? toResult(game, 0) : null;
     if (!result) throw new MediaError("ITEM_NOT_FOUND", `IGDB has no base game ${externalId}`, { provider: "igdb" });
     const steam = result.identifiers.find((identifier) => identifier.provider === "steam")?.externalId;

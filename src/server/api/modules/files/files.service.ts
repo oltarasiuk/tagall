@@ -97,6 +97,33 @@ const uploadBuffer = (
   });
 
 /**
+ * Uploads an already-validated image buffer under the item's deterministic
+ * public id. The single Cloudinary write path shared by the provider download,
+ * manual uploads and generated covers — none of them ever hand Cloudinary a URL
+ * to fetch, so a persisted item never hotlinks a source.
+ */
+export const UploadImageBuffer = async (props: {
+  folder: string;
+  canonicalKey: string;
+  buffer: Buffer;
+}): Promise<string> => {
+  const { folder, canonicalKey, buffer } = props;
+
+  const publicId = toDeterministicPublicId(canonicalKey);
+  const response = await uploadBuffer(buffer, folder, publicId);
+  const imageId = extractId(response.public_id);
+
+  if (!imageId) {
+    throw new MediaError(
+      "POSTER_DOWNLOAD_FAILED",
+      "Cloudinary returned an unusable public id",
+    );
+  }
+
+  return imageId;
+};
+
+/**
  * The one way a provider image becomes an item poster.
  *
  * The URL is never handed to Cloudinary to fetch: the server downloads the
@@ -125,16 +152,11 @@ export const DownloadAndUploadProviderImage = async (props: {
     mediaKind,
   });
 
-  const publicId = toDeterministicPublicId(canonicalKey);
-  const response = await uploadBuffer(image.buffer, folder, publicId);
-  const imageId = extractId(response.public_id);
-
-  if (!imageId) {
-    throw new MediaError(
-      "POSTER_DOWNLOAD_FAILED",
-      "Cloudinary returned an unusable public id",
-    );
-  }
+  const imageId = await UploadImageBuffer({
+    folder,
+    canonicalKey,
+    buffer: image.buffer,
+  });
 
   logMediaOperation({
     provider: candidate.source,

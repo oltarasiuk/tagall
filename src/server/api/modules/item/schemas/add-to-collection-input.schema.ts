@@ -1,5 +1,6 @@
 import { ItemStatus } from "@prisma/client";
 import { z } from "zod";
+import { ArtworkSelectionSchema } from "../../artwork/schemas/artwork.schema";
 import { MEDIA_KINDS, PROVIDER_NAMES } from "../../media/types/provider.type";
 
 export const AddToCollectionInputSchema = z.object({
@@ -7,7 +8,11 @@ export const AddToCollectionInputSchema = z.object({
   externalId: z.string().min(1).max(255),
   mediaKind: z.enum(MEDIA_KINDS),
   collectionId: z.string().cuid(),
+  /** Preferred cover selection. When omitted the legacy fields below are used. */
+  artwork: ArtworkSelectionSchema.optional(),
+  /** @deprecated use `artwork` ({ mode: "manual-url" }). Kept for transitional clients. */
   selectedImageUrl: z.string().url().optional(),
+  /** @deprecated use `artwork` ({ mode: "upload" }). Kept for transitional clients. */
   selectedImageBase64: z.string().optional(),
   rate: z.number().int().min(0).max(10),
   status: z.nativeEnum(ItemStatus),

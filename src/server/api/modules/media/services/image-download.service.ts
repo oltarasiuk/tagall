@@ -24,18 +24,24 @@ export type DownloadedImageType = {
   sourceUrl: string;
 };
 
-async function fetchFollowingRedirects(url: string): Promise<Response> {
+async function fetchFollowingRedirects(
+  url: string,
+  requireAllowlistedHost: boolean,
+): Promise<Response> {
   let currentUrl = url;
 
   for (let redirect = 0; redirect <= MAX_IMAGE_REDIRECTS; redirect++) {
     // Both checks run on every hop: a 302 to 169.254.169.254 must not be
     // followed just because the first URL looked fine.
-    if (!isAllowedImageHost(currentUrl)) {
+    if (requireAllowlistedHost && !isAllowedImageHost(currentUrl)) {
       throw new MediaError(
         "POSTER_UNSAFE_URL",
         `Image host is not allowed: ${currentUrl}`,
       );
     }
+    // A manual URL is not host-restricted, but it still must be HTTP(S), free of
+    // embedded credentials, and never a private/reserved address (checked again
+    // on every redirect hop). assertPublicUrl enforces that.
     await assertPublicUrl(currentUrl);
 
     const response = await fetch(currentUrl, {
@@ -100,34 +106,17 @@ async function readBodyWithLimit(response: Response): Promise<Buffer> {
 }
 
 /**
- * Downloads a provider image and hands back a validated, re-encoded buffer.
- * Nothing here trusts the provider: the host must be allowlisted, every
- * redirect is re-checked, the size is capped while streaming, and sharp — not
- * the Content-Type header — decides whether the bytes really are an image.
+ * The single validation gate every candidate byte stream passes through:
+ * downloaded provider images, manual URLs and direct uploads. sharp — not a
+ * Content-Type header or a client claim — decides the real format, the shape is
+ * checked for the media kind, and the output is EXIF-rotated, size-capped and
+ * re-encoded to WebP.
  */
-export async function downloadProviderImage(props: {
-  url: string;
+export async function reencodeValidImage(props: {
+  raw: Buffer;
   mediaKind: MediaKindType;
-}): Promise<DownloadedImageType> {
-  const { url, mediaKind } = props;
-
-  const response = await fetchFollowingRedirects(url);
-
-  if (!response.ok) {
-    throw new MediaError(
-      "POSTER_DOWNLOAD_FAILED",
-      `Image request failed with ${response.status}`,
-    );
-  }
-
-  if (!isAllowedImageMimeType(response.headers.get("content-type"))) {
-    throw new MediaError(
-      "POSTER_INVALID_IMAGE",
-      `Unsupported content type: ${response.headers.get("content-type") ?? "none"}`,
-    );
-  }
-
-  const raw = await readBodyWithLimit(response);
+}): Promise<{ buffer: Buffer; width: number; height: number }> {
+  const { raw, mediaKind } = props;
 
   let metadata;
   try {
@@ -135,7 +124,7 @@ export async function downloadProviderImage(props: {
   } catch (error) {
     throw new MediaError(
       "POSTER_INVALID_IMAGE",
-      "Downloaded bytes are not a decodable image",
+      "Bytes are not a decodable image",
       { cause: error },
     );
   }
@@ -171,6 +160,115 @@ export async function downloadProviderImage(props: {
     buffer,
     width: output.width ?? 0,
     height: output.height ?? 0,
-    sourceUrl: url,
   };
+}
+
+async function downloadImage(props: {
+  url: string;
+  mediaKind: MediaKindType;
+  requireAllowlistedHost: boolean;
+}): Promise<DownloadedImageType> {
+  const { url, mediaKind, requireAllowlistedHost } = props;
+
+  const response = await fetchFollowingRedirects(url, requireAllowlistedHost);
+
+  if (!response.ok) {
+    throw new MediaError(
+      "POSTER_DOWNLOAD_FAILED",
+      `Image request failed with ${response.status}`,
+    );
+  }
+
+  if (!isAllowedImageMimeType(response.headers.get("content-type"))) {
+    throw new MediaError(
+      "POSTER_INVALID_IMAGE",
+      `Unsupported content type: ${response.headers.get("content-type") ?? "none"}`,
+    );
+  }
+
+  const raw = await readBodyWithLimit(response);
+  const { buffer, width, height } = await reencodeValidImage({ raw, mediaKind });
+
+  return { buffer, width, height, sourceUrl: url };
+}
+
+/**
+ * Downloads a provider image and hands back a validated, re-encoded buffer.
+ * Nothing here trusts the provider: the host must be allowlisted, every
+ * redirect is re-checked, the size is capped while streaming, and sharp — not
+ * the Content-Type header — decides whether the bytes really are an image.
+ */
+export function downloadProviderImage(props: {
+  url: string;
+  mediaKind: MediaKindType;
+}): Promise<DownloadedImageType> {
+  return downloadImage({ ...props, requireAllowlistedHost: true });
+}
+
+/**
+ * A manual URL the user typed. It is not restricted to the provider host
+ * allowlist — that list is for provider results, not user input — but every
+ * other guard stays on: HTTP(S) only, no credentials, no private/reserved IP on
+ * any redirect hop, streamed byte cap, MIME check and sharp format/shape
+ * validation. (assertPublicUrl has a known DNS-rebinding limitation, acceptable
+ * only under this app's single-user/private scope.)
+ */
+export function downloadManualImage(props: {
+  url: string;
+  mediaKind: MediaKindType;
+}): Promise<DownloadedImageType> {
+  return downloadImage({ ...props, requireAllowlistedHost: false });
+}
+
+const MAX_UPLOAD_BASE64_LENGTH = Math.ceil((MAX_IMAGE_BYTES * 4) / 3) + 128;
+
+/**
+ * A direct file/clipboard upload arriving as a data URL or bare base64. Bounded
+ * before decoding, then validated by the same sharp pipeline as every other
+ * source.
+ */
+export async function decodeAndValidateUpload(props: {
+  dataBase64: string;
+  mediaKind: MediaKindType;
+}): Promise<{ buffer: Buffer; width: number; height: number }> {
+  const { dataBase64, mediaKind } = props;
+
+  if (dataBase64.length > MAX_UPLOAD_BASE64_LENGTH) {
+    throw new MediaError(
+      "ARTWORK_UPLOAD_INVALID",
+      `Upload is larger than ${MAX_IMAGE_BYTES} bytes`,
+    );
+  }
+
+  const base64 = dataBase64.includes(",")
+    ? dataBase64.slice(dataBase64.indexOf(",") + 1)
+    : dataBase64;
+
+  let raw: Buffer;
+  try {
+    raw = Buffer.from(base64, "base64");
+  } catch (error) {
+    throw new MediaError("ARTWORK_UPLOAD_INVALID", "Upload is not valid base64", {
+      cause: error,
+    });
+  }
+
+  if (raw.byteLength === 0 || raw.byteLength > MAX_IMAGE_BYTES) {
+    throw new MediaError(
+      "ARTWORK_UPLOAD_INVALID",
+      `Upload must be between 1 and ${MAX_IMAGE_BYTES} bytes`,
+    );
+  }
+
+  try {
+    return await reencodeValidImage({ raw, mediaKind });
+  } catch (error) {
+    // Normalize to the upload-specific code so the UI keeps the modal open on
+    // the Cover section instead of showing a generic download failure.
+    throw new MediaError(
+      "ARTWORK_UPLOAD_INVALID",
+      "Uploaded file is not a usable cover image",
+      { cause: error },
+    );
+  }
 }

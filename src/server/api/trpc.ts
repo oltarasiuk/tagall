@@ -13,6 +13,7 @@ import { ZodError } from "zod";
 
 import { getServerAuthSession } from "~/server/auth";
 import { db } from "~/server/db";
+import { isMediaError } from "./modules/media/errors/media.error";
 
 /**
  * 1. CONTEXT
@@ -47,12 +48,22 @@ const t = initTRPC.context<typeof createTRPCContext>().create({
   transformer: superjson,
 
   errorFormatter({ shape, error }) {
+    // Surface the stable MediaError code so the UI reacts to the code
+    // (POSTER_REQUIRED opens the cover picker, ARTWORK_* keeps the modal open)
+    // instead of parsing an English message.
+    const mediaError = isMediaError(error.cause) ? error.cause : null;
+    const mediaErrorCode = mediaError?.code ?? null;
+
     return {
       ...shape,
       data: {
         ...shape.data,
         zodError:
           error.cause instanceof ZodError ? error.cause.flatten() : null,
+        mediaErrorCode,
+        artworkErrorCode: mediaErrorCode?.startsWith("ARTWORK_")
+          ? mediaErrorCode
+          : null,
       },
     };
   },

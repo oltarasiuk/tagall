@@ -2,6 +2,7 @@ import { env } from "~/env";
 import { MediaError } from "../errors/media.error";
 import {
   OpenLibraryAuthorSchema,
+  OpenLibraryEditionsSchema,
   OpenLibraryRatingsSchema,
   OpenLibrarySearchDocSchema,
   OpenLibrarySearchResponseSchema,
@@ -87,6 +88,62 @@ export const workUrl = (workId: string): string =>
  */
 export const coverUrl = (coverId: number): string =>
   `${OPEN_LIBRARY_COVERS_URL}/b/id/${coverId}-L.jpg?default=false`;
+
+/** Medium size for the picker gallery; the full L cover is what gets persisted. */
+export const coverPreviewUrl = (coverId: number): string =>
+  `${OPEN_LIBRARY_COVERS_URL}/b/id/${coverId}-M.jpg?default=false`;
+
+const MAX_EDITION_COVERS = 20;
+
+/**
+ * Every distinct cover across a work's editions, for the artwork picker. A work
+ * has one identity but many printings, and their covers are the real value of a
+ * multi-source cover gallery for books/comics. Cover ids are used directly (not
+ * mass ISBN lookups), deduplicated, and capped. The item stays work-level no
+ * matter which edition cover the user keeps.
+ */
+export const getWorkEditionCovers = async (
+  workId: string,
+): Promise<ImageCandidateType[]> => {
+  const id = toWorkId(workId);
+  if (!id) return [];
+
+  const coverIds = new Set<number>();
+
+  const data = await providerRequest<unknown>(
+    {
+      provider: "openlibrary",
+      operation: "details",
+      timeoutMs: DETAILS_TIMEOUT_MS,
+    },
+    {
+      url: `${OPEN_LIBRARY_URL}/works/${id}/editions.json`,
+      headers: headers(),
+      params: { limit: 50 },
+    },
+  );
+
+  const parsed = OpenLibraryEditionsSchema.safeParse(data);
+  if (parsed.success) {
+    for (const entry of parsed.data.entries ?? []) {
+      for (const coverId of entry.covers ?? []) {
+        if (typeof coverId === "number" && coverId > 0) coverIds.add(coverId);
+      }
+      if (coverIds.size >= MAX_EDITION_COVERS) break;
+    }
+  }
+
+  return [...coverIds].slice(0, MAX_EDITION_COVERS).map((coverId) => ({
+    source: "openlibrary" as const,
+    url: coverUrl(coverId),
+    width: null,
+    height: null,
+    language: null,
+    likes: null,
+    kind: "cover" as const,
+    canPersist: true,
+  }));
+};
 
 const toImageCandidates = (
   coverId: number | null | undefined,

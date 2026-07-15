@@ -66,6 +66,17 @@ export const env = createEnv({
     /** BGG remains disabled until the application token is approved. */
     BGG_API_TOKEN: z.string().optional(),
 
+    /**
+     * When true (default), a missing/broken remote cover falls back to a locally
+     * generated gradient poster instead of blocking the add with POSTER_REQUIRED.
+     * Not a secret; never prefix with NEXT_PUBLIC_.
+     */
+    GENERATED_COVER_FALLBACK_ENABLED: z
+      .string()
+      .optional()
+      .default("true")
+      .transform((v) => v !== "false" && v !== "0"),
+
     ALLOWED_EMAILS: z.string(),
     SECRET_CLIENT_COOKIE_VAR: z.string(),
   },
@@ -112,6 +123,8 @@ export const env = createEnv({
     FANART_TV_PERSONAL_API_KEY: process.env.FANART_TV_PERSONAL_API_KEY,
     FANART_TV_PROJECT_API_KEY: process.env.FANART_TV_PROJECT_API_KEY,
     BGG_API_TOKEN: process.env.BGG_API_TOKEN,
+    GENERATED_COVER_FALLBACK_ENABLED:
+      process.env.GENERATED_COVER_FALLBACK_ENABLED,
     ALLOWED_EMAILS: process.env.ALLOWED_EMAILS,
     NEXT_PUBLIC_CLOUDINARY_FOLDER: process.env.NEXT_PUBLIC_CLOUDINARY_FOLDER,
     SECRET_CLIENT_COOKIE_VAR: process.env.SECRET_CLIENT_COOKIE_VAR,

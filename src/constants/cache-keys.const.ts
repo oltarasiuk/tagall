@@ -122,6 +122,12 @@ export const CACHE_KEYS = {
       limit: true,
     },
   },
+  artwork: {
+    getCandidates: {
+      userId: true,
+      input: true,
+    },
+  },
   tag: {
     getUserTags: {
       userId: true,
