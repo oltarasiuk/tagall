@@ -81,13 +81,11 @@ function AddContainer() {
 
   return (
     <Container>
-      <div className="w-min">
-        <CollectionsTabs
-          collections={collections}
-          selectedCollectionsIds={selectedCollectionIds}
-          setSelectedCollectionsIds={setSelectedCollectionIds}
-        />
-      </div>
+      <CollectionsTabs
+        collections={collections}
+        selectedCollectionsIds={selectedCollectionIds}
+        setSelectedCollectionsIds={setSelectedCollectionIds}
+      />
 
       <Search
         autoFocus
