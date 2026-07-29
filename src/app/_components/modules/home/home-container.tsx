@@ -55,7 +55,7 @@ function HomeContainer() {
         type: "desc",
         name: "date",
       },
-      collectionsIds: collections.map((collection) => collection.id),
+      collectionsIds: [],
     },
   });
 

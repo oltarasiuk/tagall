@@ -45,7 +45,7 @@ function RandomContainer() {
       limit: DEFAULT_RANDOM_LIMIT,
       itemSize: "large",
       filtering: [],
-      collectionsIds: collections.map((collection) => collection.id),
+      collectionsIds: [],
     },
   });
 

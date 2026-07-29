@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import type {
   GetUserItemsFilterType,
   GetUserItemsSortType,
@@ -29,8 +29,7 @@ export function PublicHomeContainer() {
       filtering: [{ name: "status", type: "include", value: "COMPLETED" }],
       sorting: { name: "date", type: "desc" },
       viewMode: "standard",
-      collectionsIds:
-        collections.length > 0 && collections[0] ? [collections[0].id] : [],
+      collectionsIds: [],
     },
   });
 
@@ -46,18 +45,6 @@ export function PublicHomeContainer() {
   const [viewMode, setViewMode] = useState<"standard" | "tierlist" | "random">(
     getParam("viewMode"),
   );
-
-  useEffect(() => {
-    if (
-      selectedCollectionsIds.length === 0 &&
-      collections.length > 0 &&
-      collections[0]
-    ) {
-      const firstCollectionId = collections[0].id;
-      setSelectedCollectionsIds([firstCollectionId]);
-      setQueryParams({ collectionsIds: [firstCollectionId] });
-    }
-  }, [collections, selectedCollectionsIds.length, setQueryParams]);
 
   const debouncedCollectionsIds = useDebounce(selectedCollectionsIds);
 

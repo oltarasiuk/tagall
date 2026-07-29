@@ -30,7 +30,7 @@ function ProfileContainer() {
   const { getParam, setQueryParams } = useQueryParams<ProfileParamsType>({
     schema: ProfileParamsSchema,
     defaultParams: {
-      collectionsIds: collections.map((collection) => collection.id),
+      collectionsIds: [],
     },
   });
 

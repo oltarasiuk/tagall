@@ -69,7 +69,7 @@ function TierListContainer() {
         type: "asc",
         name: "title",
       },
-      collectionsIds: collections.map((collection) => collection.id),
+      collectionsIds: [],
     },
   });
 
